@@ -151,7 +151,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="AsyncIO.hpp" />
     <ClInclude Include="DynamicBuffer.hpp" />
+    <ClInclude Include="Globals.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Scopes.hpp" />
     <ClInclude Include="String.hpp" />

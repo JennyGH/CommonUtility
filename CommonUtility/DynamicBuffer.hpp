@@ -1,12 +1,6 @@
 #pragma once
+#include "Globals.h"
 #include <string.h>
-#ifndef null
-#if __cplusplus <= 199711L
-#define null NULL
-#else
-#define null nullptr
-#endif
-#endif // !null
 
 namespace common
 {

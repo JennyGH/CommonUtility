@@ -43,25 +43,25 @@ namespace common
 
 		char * StringConvertion::WideCharToMultiChar(const wchar_t * lpSrc, int length, int* outLength)
 		{
-			if (NULL == lpSrc || outLength == NULL || length <= 0)
-				return NULL;
+			if (null == lpSrc || outLength == null || length <= 0)
+				return null;
 
 			int chSize = ::WideCharToMultiByte(CP_ACP, 0, lpSrc, length, 0, 0, 0, 0);
 			if (chSize <= 0)
-				return NULL;
+				return null;
 
 			char * chStr = new char[chSize + 1];
-			if (NULL == chStr)
-				return NULL;
+			if (null == chStr)
+				return null;
 			memset(chStr, 0, chSize + 1);
 
 			int iRes = 0;
-			iRes = ::WideCharToMultiByte(CP_ACP, 0, lpSrc, length, chStr, chSize, NULL, NULL);
+			iRes = ::WideCharToMultiByte(CP_ACP, 0, lpSrc, length, chStr, chSize, null, null);
 			if (iRes <= 0)
 			{
 				delete[] chStr;
-				chStr = NULL;
-				return NULL;
+				chStr = null;
+				return null;
 			}
 
 			*outLength = chSize;
@@ -73,25 +73,25 @@ namespace common
 
 		char * StringConvertion::WideCharToUTF8String(const wchar_t * lpSrc, int length, int* outLength)
 		{
-			if (NULL == lpSrc || outLength == NULL || length <= 0)
-				return NULL;
+			if (null == lpSrc || outLength == null || length <= 0)
+				return null;
 
-			int utfSize = WideCharToMultiByte(CP_UTF8, 0, lpSrc, length, 0, 0, NULL, NULL);
+			int utfSize = WideCharToMultiByte(CP_UTF8, 0, lpSrc, length, 0, 0, null, null);
 			if (utfSize <= 0)
-				return NULL;
+				return null;
 
 			char * utfStr = new char[utfSize + 1];
-			if (NULL == utfStr)
-				return NULL;
+			if (null == utfStr)
+				return null;
 			memset(utfStr, 0, utfSize + 1);
 
 			int iRes = 0;
-			iRes = WideCharToMultiByte(CP_UTF8, 0, lpSrc, length, utfStr, utfSize, NULL, NULL);
+			iRes = WideCharToMultiByte(CP_UTF8, 0, lpSrc, length, utfStr, utfSize, null, null);
 			if (iRes <= 0)
 			{
 				delete[] utfStr;
-				utfStr = NULL;
-				return NULL;
+				utfStr = null;
+				return null;
 			}
 
 			*outLength = iRes;
@@ -103,16 +103,16 @@ namespace common
 
 		wchar_t * StringConvertion::MultiCharToWideChar(const char * lpSrc, int length, int* outLength)
 		{
-			if (NULL == lpSrc || length <= 0 || outLength == NULL)
-				return NULL;
+			if (null == lpSrc || length <= 0 || outLength == null)
+				return null;
 
 			int wideSize = MultiByteToWideChar(CP_ACP, 0, lpSrc, length, 0, 0);
 			if (0 == wideSize)
-				return NULL;
+				return null;
 
 			wchar_t * wideCh = new wchar_t[wideSize + 1];
-			if (NULL == wideCh)
-				return NULL;
+			if (null == wideCh)
+				return null;
 			wmemset(wideCh, 0, wideSize + 1);
 
 			int iRes = 0;
@@ -120,8 +120,8 @@ namespace common
 			if (0 == iRes)
 			{
 				delete[] wideCh;
-				wideCh = NULL;
-				return NULL;
+				wideCh = null;
+				return null;
 			}
 
 			*outLength = iRes;
@@ -132,20 +132,20 @@ namespace common
 
 		char * StringConvertion::MultiCharToUTF8String(const char * lpSrc, int length, int* outLength)
 		{
-			if (NULL == lpSrc || length <= 0 || outLength == NULL)
-				return NULL;
+			if (null == lpSrc || length <= 0 || outLength == null)
+				return null;
 
 			//First convert the ansi to unicode
 			int len = 0;
 			wchar_t * wchStr = MultiCharToWideChar(lpSrc, length, &len);
-			if (NULL == wchStr)
-				return NULL;
+			if (null == wchStr)
+				return null;
 
 			//Then convert the unicode to utf8
 			char * utfStr = WideCharToUTF8String(wchStr, len, &len);
-			if (NULL == utfStr)
+			if (null == utfStr)
 			{
-				return NULL;
+				return null;
 			}
 			*outLength = len;
 			return utfStr;
@@ -154,24 +154,24 @@ namespace common
 
 		wchar_t * StringConvertion::UTF8StringToWideChar(const char * lpSrc, int length, int* outLength)
 		{
-			if (NULL == lpSrc || length <= 0 || outLength == NULL)
-				return NULL;
+			if (null == lpSrc || length <= 0 || outLength == null)
+				return null;
 
 			int wchSize = MultiByteToWideChar(CP_UTF8, 0, lpSrc, length, 0, 0);
 			if (wchSize <= 0)
-				return NULL;
+				return null;
 
 			wchar_t * wchStr = new wchar_t[wchSize + 1];
-			if (NULL == wchStr)
-				return NULL;
+			if (null == wchStr)
+				return null;
 			wmemset(wchStr, 0, wchSize + 1);
 
 			int iRes = MultiByteToWideChar(CP_UTF8, 0, lpSrc, length, wchStr, wchSize);
 			if (iRes <= 0)
 			{
 				delete[] wchStr;
-				wchStr = NULL;
-				return NULL;
+				wchStr = null;
+				return null;
 			}
 			*outLength = iRes;
 			m_wideChar.push_back(wchStr);
@@ -182,19 +182,19 @@ namespace common
 
 		char * StringConvertion::UTF8StringToMultiChar(const char * lpSrc, int length, int* outLength)
 		{
-			if (NULL == lpSrc || length <= 0 || outLength == NULL)
-				return NULL;
+			if (null == lpSrc || length <= 0 || outLength == null)
+				return null;
 
 			//First convert utf8 to wide char
 			int len = 0;
 			wchar_t * wchStr = UTF8StringToWideChar(lpSrc, length, &len);
-			if (NULL == wchStr)
-				return NULL;
+			if (null == wchStr)
+				return null;
 
 			char * lpChStr = WideCharToMultiChar(wchStr, len, &len);
-			if (NULL == lpChStr)
+			if (null == lpChStr)
 			{
-				return NULL;
+				return null;
 			}
 
 			*outLength = len;
@@ -209,7 +209,7 @@ namespace common
 			if (length <= 0)
 				return (L"");
 			wchar_t * lpCh = MultiCharToWideChar(sourceStr.c_str(), length, &length);
-			if (NULL == lpCh)
+			if (null == lpCh)
 				return L"";
 			else
 				return (lpCh);
@@ -223,7 +223,7 @@ namespace common
 				return ("");
 
 			char * lpCh = WideCharToMultiChar(sourceStr.c_str(), length, &length);
-			if (NULL == lpCh)
+			if (null == lpCh)
 				return ("");
 			else
 				return (lpCh);
@@ -320,7 +320,7 @@ namespace common
 		{
 			int outlen = 0;
 			wchar_t * lpBuf = UTF8StringToWideChar(lpStr, strlen(lpStr), &outlen);
-			if (lpBuf != NULL)
+			if (lpBuf != null)
 				return std::wstring(lpBuf, outlen);
 			else
 				return (L"");

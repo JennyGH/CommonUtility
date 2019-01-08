@@ -6,6 +6,7 @@
 #define USE_CSTRING
 #define USE_ATL_SPZCE
 
+#include "Globals.h"
 #include <vector>
 #include <string>
 

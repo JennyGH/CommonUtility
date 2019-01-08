@@ -33,6 +33,12 @@
     <ClInclude Include="Scopes.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="AsyncIO.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Globals.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">

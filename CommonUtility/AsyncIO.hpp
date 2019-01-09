@@ -15,7 +15,7 @@ namespace common
 			AsyncBuffer() {}
 			AsyncBuffer(_op_type op) :m_op(op) {}
 			AsyncBuffer(_owner_type owner, _op_type op) : m_owner(owner), m_op(op) {}
-			~AsyncBuffer() {}
+			virtual ~AsyncBuffer() {}
 		private:
 			_owner_type m_owner;
 			_op_type m_op;
@@ -28,7 +28,7 @@ namespace common
 {
 	namespace async
 	{
-		template<typename _Buffer, unsigned long _timeout = INFINITE, int _needThreads = 4>
+		template<typename _Buffer, unsigned long _timeout = INFINITE>
 		class CompletionPort
 		{
 		public:
@@ -39,7 +39,7 @@ namespace common
 			{
 				if (null == hHandle)
 				{
-					return -1UL;
+					return 0xffffffff;
 				}
 				CompletionPort& self = *((CompletionPort*)hHandle);
 				while (true)
@@ -50,6 +50,11 @@ namespace common
 					BOOL bSuccess = ::GetQueuedCompletionStatus(self.m_hCompletionPort, &nBytesOfTransferred, (PULONG_PTR)&pCompeltionKey, (LPOVERLAPPED*)&pOverlapped, _timeout);
 					if (bSuccess)
 					{
+						if (-1 == (long)nBytesOfTransferred)
+						{
+							break;
+						}
+
 						self.onComplete(nBytesOfTransferred, pCompeltionKey, pOverlapped);
 					}
 					else
@@ -62,12 +67,15 @@ namespace common
 				return 0UL;
 			}
 		public:
-			CompletionPort() :
+			CompletionPort(HANDLE hFileHandle, int needThreads = 4) :
 				m_hCompletionPort(null),
+				m_hFileHandle(hFileHandle),
+				m_nNeedThread(needThreads),
 				m_nCountOfThread(0)
 			{
-				MY_ASSERT(_needThreads >= 1);
+				MY_ASSERT(m_nNeedThread > 0);
 			}
+
 			virtual ~CompletionPort()
 			{
 				close();
@@ -79,7 +87,7 @@ namespace common
 				::CreateIoCompletionPort(m_hFileHandle, m_hCompletionPort, null, 0);
 
 				// Create worker threads.
-				for (int index = 0; index < _needThreads; index++)
+				for (int index = 0; index < m_nNeedThread; index++)
 				{
 					HANDLE hThread = ::CreateThread(null, 0, _worker_thread, this, 0, null);
 					if (null != hThread)
@@ -105,6 +113,17 @@ namespace common
 			{
 				::CloseHandle(m_hCompletionPort);
 				m_hCompletionPort = null;
+				return *this;
+			}
+
+			CompletionPort& post(DWORD bytesOfTransfered, HANDLE hCompletionKey, _Buffer* pBuffer)
+			{
+				BOOL bSuccess = ::PostQueuedCompletionStatus(
+					m_hCompletionPort,
+					bytesOfTransfered,
+					(ULONG_PTR)hCompletionKey,
+					(LPOVERLAPPED)pBuffer);
+				return *this;
 			}
 
 		protected:
@@ -113,6 +132,7 @@ namespace common
 		protected:
 			HANDLE m_hCompletionPort;
 			HANDLE m_hFileHandle;
+			unsigned int m_nNeedThread;
 			unsigned int m_nCountOfThread;
 		};
 	}

@@ -2,22 +2,23 @@
 #include "Globals.h"
 #include <string.h>
 
+
 namespace common
 {
 	namespace raii
 	{
-		template<typename T>
+		template<typename T, typename SizeType = long>
 		class DynamicBuffer
 		{
 		public:
-			typedef typename long size_type;
+			typedef SizeType size_type;
 		public:
 			DynamicBuffer() :m_data(null), m_size(0) {}
-			DynamicBuffer(DynamicBuffer::size_type size) :m_data(null), m_size(0)
+			DynamicBuffer(SizeType size) :m_data(null), m_size(0)
 			{
 				allocate(size);
 			}
-			DynamicBuffer(const T data[], DynamicBuffer::size_type size) :m_data(null), m_size(0)
+			DynamicBuffer(const T data[], SizeType size) :m_data(null), m_size(0)
 			{
 				if (size > 0)
 				{
@@ -46,7 +47,7 @@ namespace common
 				return copy(that.m_data, that.m_size);
 			}
 
-			DynamicBuffer& copy(const T data[], DynamicBuffer::size_type size)
+			DynamicBuffer& copy(const T data[], SizeType size)
 			{
 				if (size > 0)
 				{
@@ -56,7 +57,7 @@ namespace common
 				return *this;
 			}
 
-			T* allocate(DynamicBuffer::size_type size)
+			T* allocate(SizeType size)
 			{
 				if (size > 0)
 				{
@@ -67,13 +68,13 @@ namespace common
 				return m_data;
 			}
 
-			T* resize(DynamicBuffer::size_type size)
+			T* resize(SizeType size)
 			{
 				release();
 				return allocate(size);
 			}
 
-			DynamicBuffer::size_type size() const
+			SizeType size() const
 			{
 				return m_size;
 			}
@@ -101,7 +102,7 @@ namespace common
 
 		private:
 			T* m_data;
-			DynamicBuffer::size_type m_size;
+			SizeType m_size;
 		};
 	}
 }

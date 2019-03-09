@@ -1,8 +1,10 @@
 #pragma once
-#include "Globals.h"
+#ifndef null
+#define null NULL
+#endif // !null
+
 #include <list>
 #include <string>
-#include <stdarg.h>
 
 
 namespace common

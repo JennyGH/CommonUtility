@@ -1,5 +1,8 @@
 #pragma once
-#include "Globals.h"
+#ifndef null
+#define null NULL
+#endif // !null
+
 #include <string.h>
 
 

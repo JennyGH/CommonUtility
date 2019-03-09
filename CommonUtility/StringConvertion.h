@@ -6,7 +6,6 @@
 #define USE_CSTRING
 #define USE_ATL_SPZCE
 
-#include "Globals.h"
 #include <vector>
 #include <string>
 
@@ -30,11 +29,11 @@ namespace common
 {
 	namespace text
 	{
-		class StringConvertion
+		class string_convertion
 		{
 		public:
-			StringConvertion(void);
-			~StringConvertion(void);
+			string_convertion(void);
+			~string_convertion(void);
 
 		public:
 

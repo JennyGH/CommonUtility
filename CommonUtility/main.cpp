@@ -7,20 +7,31 @@
 #include "StringConvertion.h"
 #include "DynamicBuffer.hpp"
 #include "Scopes.hpp"
+#include "SmartPointer.hpp"
 
 void myforeach(wchar_t& c)
 {
 	c = ::towlower(c);
 }
 
+
 int main()
 {
+
+	{
+		common::memory::smart_pointer<common::text::string<char>> ptr = new common::text::string<char>("12312313");
+
+		common::text::string<char>& pp = ptr;
+
+		const common::text::string<char>& cpp = ptr;
+
+	}
 	common::text::string<wchar_t> wstr(L"dubingjian|123456|杜炳坚");
 	wstr.toupper();
 	std::list<common::text::string<wchar_t>> res;
 	wstr.split(L"\n", res);
 
-	common::text::StringBuilder<wchar_t> builder;
+	common::text::string_builder<wchar_t> builder;
 	std::list<common::text::string<wchar_t>>::const_iterator iter = res.begin();
 	std::list<common::text::string<wchar_t>>::const_iterator end = res.end();
 	for (; iter != end; ++iter)
@@ -29,7 +40,7 @@ int main()
 	}
 	common::text::string<wchar_t> temp(builder);
 
-	common::text::StringConvertion conv;
+	common::text::string_convertion conv;
 	common::text::string<char> str = conv.WideCharToMultiChar(wstr);
 
 	common::raii::DynamicBuffer<char> buffer;

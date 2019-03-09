@@ -1,15 +1,18 @@
-#include "pch.h"
 #include "StringConvertion.h"
+
+#ifndef null
+#define null NULL
+#endif // !null
 
 namespace common
 {
 	namespace text
 	{
-		StringConvertion::StringConvertion(void)
+		string_convertion::string_convertion(void)
 		{
 		}
 
-		StringConvertion::~StringConvertion(void)
+		string_convertion::~string_convertion(void)
 		{
 			std::size_t count = m_utf8Char.size();
 			for (std::size_t s = 0; s < count; ++s)
@@ -41,7 +44,7 @@ namespace common
 		}
 
 
-		char * StringConvertion::WideCharToMultiChar(const wchar_t * lpSrc, int length, int* outLength)
+		char * string_convertion::WideCharToMultiChar(const wchar_t * lpSrc, int length, int* outLength)
 		{
 			if (null == lpSrc || outLength == null || length <= 0)
 				return null;
@@ -71,7 +74,7 @@ namespace common
 		}
 
 
-		char * StringConvertion::WideCharToUTF8String(const wchar_t * lpSrc, int length, int* outLength)
+		char * string_convertion::WideCharToUTF8String(const wchar_t * lpSrc, int length, int* outLength)
 		{
 			if (null == lpSrc || outLength == null || length <= 0)
 				return null;
@@ -101,7 +104,7 @@ namespace common
 		}
 
 
-		wchar_t * StringConvertion::MultiCharToWideChar(const char * lpSrc, int length, int* outLength)
+		wchar_t * string_convertion::MultiCharToWideChar(const char * lpSrc, int length, int* outLength)
 		{
 			if (null == lpSrc || length <= 0 || outLength == null)
 				return null;
@@ -130,7 +133,7 @@ namespace common
 		}
 
 
-		char * StringConvertion::MultiCharToUTF8String(const char * lpSrc, int length, int* outLength)
+		char * string_convertion::MultiCharToUTF8String(const char * lpSrc, int length, int* outLength)
 		{
 			if (null == lpSrc || length <= 0 || outLength == null)
 				return null;
@@ -152,7 +155,7 @@ namespace common
 		}
 
 
-		wchar_t * StringConvertion::UTF8StringToWideChar(const char * lpSrc, int length, int* outLength)
+		wchar_t * string_convertion::UTF8StringToWideChar(const char * lpSrc, int length, int* outLength)
 		{
 			if (null == lpSrc || length <= 0 || outLength == null)
 				return null;
@@ -180,7 +183,7 @@ namespace common
 		}
 
 
-		char * StringConvertion::UTF8StringToMultiChar(const char * lpSrc, int length, int* outLength)
+		char * string_convertion::UTF8StringToMultiChar(const char * lpSrc, int length, int* outLength)
 		{
 			if (null == lpSrc || length <= 0 || outLength == null)
 				return null;
@@ -203,7 +206,7 @@ namespace common
 		}
 
 
-		std::wstring StringConvertion::MultiCharToWideChar(const std::string & sourceStr)
+		std::wstring string_convertion::MultiCharToWideChar(const std::string & sourceStr)
 		{
 			int length = (int)sourceStr.length();
 			if (length <= 0)
@@ -216,7 +219,7 @@ namespace common
 		}
 
 
-		std::string StringConvertion::WideCharToMultiChar(const std::wstring & sourceStr)
+		std::string string_convertion::WideCharToMultiChar(const std::wstring & sourceStr)
 		{
 			int length = (int)sourceStr.length();
 			if (length <= 0)
@@ -231,7 +234,7 @@ namespace common
 		}
 
 
-		char * StringConvertion::TCHARToUTF8String(const TCHAR * lpSrc, int length, int * outLength)
+		char * string_convertion::TCHARToUTF8String(const TCHAR * lpSrc, int length, int * outLength)
 		{
 
 #if (defined(UNICODE) || defined(_UNICODE))
@@ -243,7 +246,7 @@ namespace common
 
 		}
 
-		TCHAR * StringConvertion::UTF8StringToTCHAR(char * lpSrc, int length, int *outLength)
+		TCHAR * string_convertion::UTF8StringToTCHAR(char * lpSrc, int length, int *outLength)
 		{
 #if (defined(UNICODE) || defined(_UNICODE))
 			return UTF8StringToWideChar(lpSrc, length, outLength);
@@ -256,7 +259,7 @@ namespace common
 
 #ifdef USE_CSTRING
 
-		std::string StringConvertion::CStringToString(XCString  src)
+		std::string string_convertion::CStringToString(XCString  src)
 		{
 #if (defined(UNICODE) || defined(_UNICODE))
 			LPTSTR lpStr = src.GetBuffer();
@@ -274,7 +277,7 @@ namespace common
 
 #ifdef USE_CSTRING
 
-		std::wstring StringConvertion::CStringToWstring(XCString src)
+		std::wstring string_convertion::CStringToWstring(XCString src)
 		{
 #if (defined(UNICODE) || defined(_UNICODE))
 			std::wstring wstr = src.GetBuffer();
@@ -292,7 +295,7 @@ namespace common
 
 #ifdef USE_CSTRING
 
-		XCString StringConvertion::StringToCString(const std::string & src)
+		XCString string_convertion::StringToCString(const std::string & src)
 		{
 #if (defined(UNICODE) || defined(_UNICODE))
 			return XCString(MultiCharToWideChar(src).c_str());
@@ -306,7 +309,7 @@ namespace common
 
 #ifdef USE_CSTRING
 
-		XCString StringConvertion::WStringToCString(const std::wstring & src)
+		XCString string_convertion::WStringToCString(const std::wstring & src)
 		{
 #if (defined(UNICODE) || defined(_UNICODE))
 			return XCString(src.c_str());
@@ -316,7 +319,7 @@ namespace common
 		}
 #endif
 
-		std::wstring StringConvertion::UTF8StringToWstring(char * lpStr)
+		std::wstring string_convertion::UTF8StringToWstring(char * lpStr)
 		{
 			int outlen = 0;
 			wchar_t * lpBuf = UTF8StringToWideChar(lpStr, strlen(lpStr), &outlen);

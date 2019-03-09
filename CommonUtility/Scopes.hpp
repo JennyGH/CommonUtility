@@ -1,5 +1,21 @@
 #pragma once
-#include "Globals.h"
+
+#if defined(WIN32) || defined(_WIN32) || defined(_WINDOWS)
+#ifndef WINAPI
+#define WINAPI __stdcall
+#endif // !WINAPI
+#else //Not windows
+#ifndef WINAPI
+#define WINAPI
+#endif
+#endif // If windows
+
+
+#ifndef null
+#define null NULL
+#endif // !null
+
+
 
 namespace common
 {

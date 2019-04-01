@@ -8,7 +8,8 @@
 
 #ifndef PCH_H
 #define PCH_H
-
+#include <windows.h>
+#include <tchar.h>
 #include <iostream>
 #include <stdarg.h>
 #include <string.h>

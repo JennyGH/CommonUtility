@@ -1,54 +1,103 @@
-﻿// CommonUtility.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
+﻿// convertion_test.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
 //
 
 #include "pch.h"
-#include "String.hpp"
-#include "StringBuilder.hpp"
-#include "StringConvertion.h"
-#include "DynamicBuffer.hpp"
-#include "Scopes.hpp"
-#include "SmartPointer.hpp"
+#include "Integer.hpp"
+#include "Registry.h"
+#include "Encoding.h"
+#include "Convert.h"
+#include "Guid.h"
+#include "Any.hpp"
 
-void myforeach(wchar_t& c)
-{
-	c = ::towlower(c);
-}
-
+#define TEST_ANY 1
+#define TEST_GUID 1
+#define TEST_CONVERT 1
+#define TEST_ENCODING 1
+#define TEST_REGISTRY 1
+#define TEST_INTEGER 1
 
 int main()
 {
 
+#if TEST_ANY
+	try
 	{
-		common::memory::smart_pointer<common::text::string<char>> ptr = new common::text::string<char>("12312313");
-
-		common::text::string<char>& pp = ptr;
-
-		const common::text::string<char>& cpp = ptr;
-
+		any any = (const char*)"dddd";
+		bool bHasValue = any.has_value();
+		const std::type_info& info = any.type();
+		std::string val = any.cast<const char*>();
+		any.reset();
 	}
-	common::text::string<wchar_t> wstr(L"dubingjian|123456|杜炳坚");
-	wstr.toupper();
-	std::list<common::text::string<wchar_t>> res;
-	wstr.split(L"\n", res);
-
-	common::text::string_builder<wchar_t> builder;
-	std::list<common::text::string<wchar_t>>::const_iterator iter = res.begin();
-	std::list<common::text::string<wchar_t>>::const_iterator end = res.end();
-	for (; iter != end; ++iter)
+	catch (const bad_any_cast& ex)
 	{
-		builder.appendLine(*iter);
+		printf(ex.what());
 	}
-	common::text::string<wchar_t> temp(builder);
+#endif // TEST_ANY
 
-	common::text::string_convertion conv;
-	common::text::string<char> str = conv.WideCharToMultiChar(wstr);
+#if TEST_GUID
+	Guid guid1;
+	std::string strGuid = guid1;
+	Guid guid2(strGuid);
+	std::string guid1Bytes = guid1.GetBytes();
+#endif // TEST_GUID
 
-	common::raii::DynamicBuffer<char> buffer;
-	common::raii::DynamicBuffer<wchar_t> wbuffer;
+#if TEST_CONVERT
+	unsigned long longvalue = 0x09abcdef;
+	const unsigned char bytes[] = { 0xff, 0x82, 0x16, 0x00 };
+	std::string base64 = Convert::ToBase64("BC");
+	std::string res = Convert::FromBase64(base64);
+	std::string hex = Convert::ToHex((const unsigned char*)&longvalue, sizeof(longvalue));
+	std::string raw = Convert::FromHex(hex);
 
-	wstr.replace(L"|", L";");
+	const char* ptr = raw.c_str();
+	longvalue = *((unsigned long*)ptr);
+#endif
 
-	wstr.foreach(myforeach);
+#if TEST_ENCODING
+	std::string str = "哈哈哈哈";
+	std::wstring wstr = L"哈哈哈哈";
+	const unsigned char bytes2[] = "哈哈哈哈";
+	std::wstring utf8 = Encoding::UTF8.GetString(bytes, sizeof(bytes));
+	std::wstring ascii = Encoding::ASCII.GetString(utf8);
+	int codePage = Encoding::UTF8.CodePage;
+#endif // TEST_ENCODING
+
+#if TEST_REGISTRY
+	try
+	{
+		RegistryKey& key = Registry::LocalMachine;
+		RegistryKey& software = key.OpenSubKey(_T("SOFTWARE\\NETCA\\PKI\\Devices\\NETCAKeyMobileKey"), false);
+		StringType val = software.GetValue(_T("UserName"), _T(""));
+		StringArray valueNames = software.GetValueNames();
+		StringArray keyNames = software.GetSubKeyNames();
+		software.CreateSubKey(_T("A\\B\\B1"));
+		software.CreateSubKey(_T("A\\B\\B2"));
+		software.CreateSubKey(_T("A\\B\\B3"));
+		software.CreateSubKey(_T("A\\B\\B4"));
+		software.CreateSubKey(_T("A\\B\\C"));
+		software.CreateSubKey(_T("A\\B\\C\\C1"));
+		software.CreateSubKey(_T("A\\B\\C\\C2"));
+		software.CreateSubKey(_T("A\\B\\C\\C3"));
+		software.CreateSubKey(_T("A\\B\\C\\C4"));
+		software.CreateSubKey(_T("A\\B\\C\\D"));
+		software.CreateSubKey(_T("A\\B\\C\\D\\D1"));
+		software.CreateSubKey(_T("A\\B\\C\\D\\D2"));
+		software.CreateSubKey(_T("A\\B\\C\\D\\D3"));
+		software.CreateSubKey(_T("A\\B\\C\\D\\D4"));
+		software.DeleteSubKeyTree(_T("A\\"));
+	}
+	catch (const RegistryException& ex)
+	{
+		_tprintf(ex.What().c_str());
+	}
+#endif // TEST_REGISTRY
+
+#if TEST_INTEGER
+	Int64 a("1024");
+	Short max = Short::Min;
+	std::string str2(a);
+	printf("%s", str.c_str());
+#endif // TEST_INTEGER
 
 	return 0;
 }

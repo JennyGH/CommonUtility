@@ -1,7 +1,7 @@
 #pragma once
-#ifndef null
-#define null NULL
-#endif // !null
+#ifndef NULL
+#define NULL 0
+#endif // !NULL
 
 #include <list>
 #include <string>
@@ -26,6 +26,7 @@ namespace common
 			string(const _Chr src[]) : string_t(src) {};
 			string(const _Chr src[], typename string_t::size_type len) : string_t(src, len) {};
 			string(const unsigned char src[], typename string_t::size_type len) : string_t(src, src + len) {};
+			string(const std::istreambuf_iterator<_Chr>& begin, const std::istreambuf_iterator<_Chr>& end) : string_t(begin, end) {};
 			~string() {};
 
 #define __remove(target)\
@@ -136,7 +137,7 @@ do{\
 
 			string& foreach(foreach_func func)
 			{
-				if (func != null)
+				if (func != NULL)
 				{
 					typename string_t::const_iterator iter = this->begin();
 					typename string_t::const_iterator end = this->end();
@@ -149,7 +150,7 @@ do{\
 			}
 			string& foreach(foreach_func_ref func)
 			{
-				if (func != null)
+				if (func != NULL)
 				{
 					typename string_t::iterator iter = this->begin();
 					typename string_t::iterator end = this->end();
@@ -162,7 +163,7 @@ do{\
 			}
 			string& foreach(foreach_func_const_ref func)
 			{
-				if (func != null)
+				if (func != NULL)
 				{
 					typename string_t::const_iterator iter = this->begin();
 					typename string_t::const_iterator end = this->end();

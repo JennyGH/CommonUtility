@@ -18,25 +18,34 @@
     <ClInclude Include="pch.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="String.hpp">
+    <ClInclude Include="Any.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="StringBuilder.hpp">
+    <ClInclude Include="Convert.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="StringConvertion.h">
+    <ClInclude Include="Encoding.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="DynamicBuffer.hpp">
+    <ClInclude Include="Guid.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Integer.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Registry.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Scopes.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="AsyncIO.hpp">
+    <ClInclude Include="SmartPointer.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="SmartPointer.hpp">
+    <ClInclude Include="String.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="StringBuilder.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -47,7 +56,16 @@
     <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="StringConvertion.cpp">
+    <ClCompile Include="Convert.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Encoding.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Guid.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Registry.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

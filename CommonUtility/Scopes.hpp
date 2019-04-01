@@ -11,9 +11,9 @@
 #endif // If windows
 
 
-#ifndef null
-#define null NULL
-#endif // !null
+#ifndef NULL
+#define NULL 0
+#endif // !NULL
 
 
 
@@ -40,7 +40,7 @@ namespace common
 			scope_function(_func_ function, _param_ param) :m_param(param), m_function(function) {}
 			~scope_function()
 			{
-				if (m_function != null)
+				if (m_function != NULL)
 				{
 					m_function(m_param);
 				}
@@ -59,7 +59,7 @@ namespace common
 			scope_function_noparam(_func_ function) :m_function(function) {}
 			~scope_function_noparam()
 			{
-				if (m_function != null)
+				if (m_function != NULL)
 				{
 					m_function();
 				}
@@ -77,7 +77,7 @@ namespace common
 			scope_stdcall_function(_func_ function, _param_ param) :m_param(param), m_function(function) {}
 			~scope_stdcall_function()
 			{
-				if (m_function != null)
+				if (m_function != NULL)
 				{
 					m_function(m_param);
 				}
@@ -96,7 +96,7 @@ namespace common
 			scope_stdcall_function_noparam(_func_ function) :m_function(function) {}
 			~scope_stdcall_function_noparam()
 			{
-				if (m_function != null)
+				if (m_function != NULL)
 				{
 					m_function();
 				}
@@ -113,7 +113,7 @@ namespace common
 			scope_member_function(T* object, _func_ function, _param_ param) :m_object(object), m_function(function), m_param(param) {}
 			~scope_member_function()
 			{
-				if (m_object != null && m_function != null)
+				if (m_object != NULL && m_function != NULL)
 				{
 					(m_object->*m_function)(m_param);
 				}
@@ -132,7 +132,7 @@ namespace common
 			scope_member_function_noparam(T* object, _func_ function) :m_object(object), m_function(function) {}
 			~scope_member_function_noparam()
 			{
-				if (m_object != null && m_function != null)
+				if (m_object != NULL && m_function != NULL)
 				{
 					(m_object->*m_function)();
 				}
@@ -146,20 +146,20 @@ namespace common
 		template<typename T>
 		static void release_object(T** mem)
 		{
-			if (*mem != null)
+			if (*mem != NULL)
 			{
 				delete (*mem);
-				(*mem) = null;
+				(*mem) = NULL;
 			}
 		}
 		//释放数组内存
 		template<typename T>
 		static void release_array(T** mem)
 		{
-			if (*mem != null)
+			if (*mem != NULL)
 			{
 				delete[](*mem);
-				(*mem) = null;
+				(*mem) = NULL;
 			}
 		}
 

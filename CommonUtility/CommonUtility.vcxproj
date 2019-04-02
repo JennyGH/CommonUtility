@@ -153,6 +153,7 @@
   <ItemGroup>
     <ClInclude Include="Any.hpp" />
     <ClInclude Include="Convert.h" />
+    <ClInclude Include="DateTime.h" />
     <ClInclude Include="Encoding.h" />
     <ClInclude Include="Guid.h" />
     <ClInclude Include="Integer.hpp" />
@@ -165,6 +166,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Convert.cpp" />
+    <ClCompile Include="DateTime.cpp" />
     <ClCompile Include="Encoding.cpp" />
     <ClCompile Include="Guid.cpp" />
     <ClCompile Include="main.cpp" />

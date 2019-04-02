@@ -8,6 +8,7 @@
 #include "Convert.h"
 #include "Guid.h"
 #include "Any.hpp"
+#include "DateTime.h"
 
 #define TEST_ANY 1
 #define TEST_GUID 1
@@ -18,6 +19,8 @@
 
 int main()
 {
+	DateTime datetime = DateTime::Now();
+	datetime.Year;
 
 #if TEST_ANY
 	try

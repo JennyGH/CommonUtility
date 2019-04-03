@@ -36,6 +36,7 @@ int main()
 	TimeSpan timeSpan1(6, 7, 8, 9, 10);
 	TimeSpan timeSpan2(3600 * 1000);
 	TimeSpan aaa = timeSpan0 - timeSpan1;
+	timeSpan0.Subtract(timeSpan1);
 	TimeSpan duration = aaa.Duration();
 	TimeSpan negate = aaa.Negate();
 

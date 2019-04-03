@@ -51,8 +51,8 @@ public:
 	TimeSpan(int days, int hours, int minutes, int seconds, int milliseconds);
 	TimeSpan(const TimeSpan& that);
 	TimeSpan& operator= (const TimeSpan& that);
-	TimeSpan& operator+ (const TimeSpan& that);
-	TimeSpan& operator- (const TimeSpan& that);
+	TimeSpan  operator+ (const TimeSpan& that) const;
+	TimeSpan  operator- (const TimeSpan& that) const;
 
 	bool operator>  (const TimeSpan& that) const;
 	bool operator<  (const TimeSpan& that) const;
@@ -74,6 +74,7 @@ private:
 public:
 	static const TimeSpan& const MaxValue;
 	static const TimeSpan& const MinValue;
+public:
 	const time_t& const Ticks;
 	const double& const TotalDays;
 	const double& const TotalHours;

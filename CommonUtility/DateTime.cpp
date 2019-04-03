@@ -610,26 +610,26 @@ TimeSpan & TimeSpan::operator=(const TimeSpan & that)
 	return *this;
 }
 
-TimeSpan & TimeSpan::operator+(const TimeSpan & that)
+TimeSpan TimeSpan::operator+(const TimeSpan & that) const
 {
 	_TimeSpan* pThisTimespan = static_cast<_TimeSpan*>(m_data);
 	_TimeSpan* pThatTimespan = static_cast<_TimeSpan*>(that.m_data);
-	if (pThisTimespan != NULL && pThatTimespan != NULL)
+	if (pThisTimespan == NULL || pThatTimespan == NULL)
 	{
-		pThisTimespan->FromTicks(pThisTimespan->m_ticks + pThatTimespan->m_ticks);
+		return 0;
 	}
-	return *this;
+	return pThisTimespan->m_ticks + pThatTimespan->m_ticks;
 }
 
-TimeSpan & TimeSpan::operator-(const TimeSpan & that)
+TimeSpan TimeSpan::operator-(const TimeSpan & that) const
 {
 	_TimeSpan* pThisTimespan = static_cast<_TimeSpan*>(m_data);
 	_TimeSpan* pThatTimespan = static_cast<_TimeSpan*>(that.m_data);
-	if (pThisTimespan != NULL && pThatTimespan != NULL)
+	if (pThisTimespan == NULL || pThatTimespan == NULL)
 	{
-		pThisTimespan->FromTicks(pThisTimespan->m_ticks - pThatTimespan->m_ticks);
+		return 0;
 	}
-	return *this;
+	return pThisTimespan->m_ticks - pThatTimespan->m_ticks;
 }
 
 bool TimeSpan::operator>(const TimeSpan & that) const

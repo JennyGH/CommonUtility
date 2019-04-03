@@ -1,9 +1,6 @@
 #include "pch.h"
 #include "DateTime.h"
 
-#define NOW time(NULL)
-
-
 static const int g_SecondsPerMinute = 60;
 static const int g_SecondsPerHour = g_SecondsPerMinute * 60;
 static const int g_SecondsPerDay = g_SecondsPerHour * 24;
@@ -12,6 +9,7 @@ static const int g_MillisecondsPerMinute = g_SecondsPerMinute * g_MillisecondsPe
 static const int g_MillisecondsPerHour = g_SecondsPerHour * g_MillisecondsPerSecond;
 static const int g_MillisecondsPerDay = g_SecondsPerDay * g_MillisecondsPerSecond;
 
+#define NOW							time(NULL)
 #define SECONDS_PER_MINUTE			g_SecondsPerMinute
 #define SECONDS_PER_HOUR			g_SecondsPerHour
 #define SECONDS_PER_DAY				g_SecondsPerDay
@@ -92,59 +90,6 @@ public:
 	enum DayOfWeek m_dayOfWeek;
 	enum DateTimeKind m_kind;
 };
-
-class _TimeSpan
-{
-public:
-	_TimeSpan(time_t milliseconds) :
-		m_ticks(milliseconds),
-		m_days(milliseconds / MILLISECONDS_PER_DAY),
-		m_hours((milliseconds % MILLISECONDS_PER_DAY) / MILLISECONDS_PER_HOUR),
-		m_minutes((((milliseconds % MILLISECONDS_PER_DAY)) % MILLISECONDS_PER_HOUR) / MILLISECONDS_PER_MINUTE),
-		m_seconds(((((milliseconds % MILLISECONDS_PER_DAY)) % MILLISECONDS_PER_HOUR) % MILLISECONDS_PER_MINUTE) / MILLISECONDS_PER_SECOND),
-		m_milliseconds(((((milliseconds % MILLISECONDS_PER_DAY)) % MILLISECONDS_PER_HOUR) % MILLISECONDS_PER_MINUTE) % MILLISECONDS_PER_SECOND),
-		m_totalDays(double(milliseconds) / MILLISECONDS_PER_DAY),
-		m_totalHours(double(milliseconds) / MILLISECONDS_PER_HOUR),
-		m_totalMinutes(double(milliseconds) / MILLISECONDS_PER_MINUTE),
-		m_totalSeconds(double(milliseconds) / MILLISECONDS_PER_SECOND),
-		m_totalMilliseconds(milliseconds)
-	{}
-	_TimeSpan(int days, int hours, int minutes, int seconds, int milliseconds) :
-		m_ticks(
-			days * MILLISECONDS_PER_DAY +
-			hours * MILLISECONDS_PER_HOUR +
-			minutes * MILLISECONDS_PER_MINUTE +
-			seconds * MILLISECONDS_PER_SECOND +
-			milliseconds),
-		m_days(days),
-		m_hours(hours),
-		m_minutes(minutes),
-		m_seconds(seconds),
-		m_milliseconds(milliseconds),
-		m_totalDays(double(m_ticks) / MILLISECONDS_PER_DAY),
-		m_totalHours(double(m_ticks) / MILLISECONDS_PER_HOUR),
-		m_totalMinutes(double(m_ticks) / MILLISECONDS_PER_MINUTE),
-		m_totalSeconds(double(m_ticks) / MILLISECONDS_PER_SECOND),
-		m_totalMilliseconds(m_ticks)
-	{}
-
-	void FromTicks(time_t ticks);
-	void FromDateTime(int days, int hours, int minutes, int seconds, int milliseconds);
-
-public:
-	time_t m_ticks;
-	int m_days;
-	int m_hours;
-	int m_minutes;
-	int m_seconds;
-	int m_milliseconds;
-	double m_totalDays;
-	double m_totalHours;
-	double m_totalMinutes;
-	double m_totalSeconds;
-	double m_totalMilliseconds;
-};
-
 
 time_t ParseTicksFromDateTime(
 	int year, int month, int day,
@@ -566,6 +511,93 @@ DateTime DateTime::UtcNow()
 const TimeSpan& const TimeSpan::MaxValue = ((1LL << (sizeof(time_t) * 8 - 1)) - 1) / (MILLISECONDS_PER_SECOND * 10);
 const TimeSpan& const TimeSpan::MinValue = ((1LL << (sizeof(time_t) * 8 - 1)) + 1) / (MILLISECONDS_PER_SECOND * 10);
 
+class _TimeSpan
+{
+public:
+	_TimeSpan(time_t milliseconds) :
+		m_ticks(milliseconds),
+		m_days(milliseconds / MILLISECONDS_PER_DAY),
+		m_hours((milliseconds % MILLISECONDS_PER_DAY) / MILLISECONDS_PER_HOUR),
+		m_minutes((((milliseconds % MILLISECONDS_PER_DAY)) % MILLISECONDS_PER_HOUR) / MILLISECONDS_PER_MINUTE),
+		m_seconds(((((milliseconds % MILLISECONDS_PER_DAY)) % MILLISECONDS_PER_HOUR) % MILLISECONDS_PER_MINUTE) / MILLISECONDS_PER_SECOND),
+		m_milliseconds(((((milliseconds % MILLISECONDS_PER_DAY)) % MILLISECONDS_PER_HOUR) % MILLISECONDS_PER_MINUTE) % MILLISECONDS_PER_SECOND),
+		m_totalDays(double(milliseconds) / MILLISECONDS_PER_DAY),
+		m_totalHours(double(milliseconds) / MILLISECONDS_PER_HOUR),
+		m_totalMinutes(double(milliseconds) / MILLISECONDS_PER_MINUTE),
+		m_totalSeconds(double(milliseconds) / MILLISECONDS_PER_SECOND),
+		m_totalMilliseconds(milliseconds)
+	{}
+	_TimeSpan(int days, int hours, int minutes, int seconds, int milliseconds) :
+		m_ticks(
+			days * MILLISECONDS_PER_DAY +
+			hours * MILLISECONDS_PER_HOUR +
+			minutes * MILLISECONDS_PER_MINUTE +
+			seconds * MILLISECONDS_PER_SECOND +
+			milliseconds),
+		m_days(days),
+		m_hours(hours),
+		m_minutes(minutes),
+		m_seconds(seconds),
+		m_milliseconds(milliseconds),
+		m_totalDays(double(m_ticks) / MILLISECONDS_PER_DAY),
+		m_totalHours(double(m_ticks) / MILLISECONDS_PER_HOUR),
+		m_totalMinutes(double(m_ticks) / MILLISECONDS_PER_MINUTE),
+		m_totalSeconds(double(m_ticks) / MILLISECONDS_PER_SECOND),
+		m_totalMilliseconds(m_ticks)
+	{}
+
+	void FromTicks(time_t ticks);
+	void FromDateTime(int days, int hours, int minutes, int seconds, int milliseconds);
+
+public:
+	time_t m_ticks;
+	int m_days;
+	int m_hours;
+	int m_minutes;
+	int m_seconds;
+	int m_milliseconds;
+	double m_totalDays;
+	double m_totalHours;
+	double m_totalMinutes;
+	double m_totalSeconds;
+	double m_totalMilliseconds;
+};
+
+void _TimeSpan::FromTicks(time_t ticks)
+{
+	m_ticks = (ticks);
+	m_days = (ticks / MILLISECONDS_PER_DAY);
+	m_hours = ((ticks % MILLISECONDS_PER_DAY) / MILLISECONDS_PER_HOUR);
+	m_minutes = ((((ticks % MILLISECONDS_PER_DAY)) % MILLISECONDS_PER_HOUR) / MILLISECONDS_PER_MINUTE);
+	m_seconds = (((((ticks % MILLISECONDS_PER_DAY)) % MILLISECONDS_PER_HOUR) % MILLISECONDS_PER_MINUTE) / MILLISECONDS_PER_SECOND);
+	m_milliseconds = (((((ticks % MILLISECONDS_PER_DAY)) % MILLISECONDS_PER_HOUR) % MILLISECONDS_PER_MINUTE) % MILLISECONDS_PER_SECOND);
+	m_totalDays = (double(ticks) / MILLISECONDS_PER_DAY);
+	m_totalHours = (double(ticks) / MILLISECONDS_PER_HOUR);
+	m_totalMinutes = (double(ticks) / MILLISECONDS_PER_MINUTE);
+	m_totalSeconds = (double(ticks) / MILLISECONDS_PER_SECOND);
+	m_totalMilliseconds = (ticks);
+}
+
+void _TimeSpan::FromDateTime(int days, int hours, int minutes, int seconds, int milliseconds)
+{
+	m_ticks = (
+		days * MILLISECONDS_PER_DAY +
+		hours * MILLISECONDS_PER_HOUR +
+		minutes * MILLISECONDS_PER_MINUTE +
+		seconds * MILLISECONDS_PER_SECOND +
+		milliseconds);
+	m_days = (days);
+	m_hours = (hours);
+	m_minutes = (minutes);
+	m_seconds = (seconds);
+	m_milliseconds = (milliseconds);
+	m_totalDays = (double(m_ticks) / MILLISECONDS_PER_DAY);
+	m_totalHours = (double(m_ticks) / MILLISECONDS_PER_HOUR);
+	m_totalMinutes = (double(m_ticks) / MILLISECONDS_PER_MINUTE);
+	m_totalSeconds = (double(m_ticks) / MILLISECONDS_PER_SECOND);
+	m_totalMilliseconds = (m_ticks);
+}
+
 TimeSpan::TimeSpan(time_t ticks) :
 	m_data(new _TimeSpan(ticks)),
 	INIT_TIMESPAN_PROPERTIES
@@ -704,41 +736,6 @@ TimeSpan::~TimeSpan()
 		delete pThisTimespan;
 		m_data = pThisTimespan = NULL;
 	}
-}
-
-void _TimeSpan::FromTicks(time_t ticks)
-{
-	m_ticks = (ticks);
-	m_days = (ticks / MILLISECONDS_PER_DAY);
-	m_hours = ((ticks % MILLISECONDS_PER_DAY) / MILLISECONDS_PER_HOUR);
-	m_minutes = ((((ticks % MILLISECONDS_PER_DAY)) % MILLISECONDS_PER_HOUR) / MILLISECONDS_PER_MINUTE);
-	m_seconds = (((((ticks % MILLISECONDS_PER_DAY)) % MILLISECONDS_PER_HOUR) % MILLISECONDS_PER_MINUTE) / MILLISECONDS_PER_SECOND);
-	m_milliseconds = (((((ticks % MILLISECONDS_PER_DAY)) % MILLISECONDS_PER_HOUR) % MILLISECONDS_PER_MINUTE) % MILLISECONDS_PER_SECOND);
-	m_totalDays = (double(ticks) / MILLISECONDS_PER_DAY);
-	m_totalHours = (double(ticks) / MILLISECONDS_PER_HOUR);
-	m_totalMinutes = (double(ticks) / MILLISECONDS_PER_MINUTE);
-	m_totalSeconds = (double(ticks) / MILLISECONDS_PER_SECOND);
-	m_totalMilliseconds = (ticks);
-}
-
-void _TimeSpan::FromDateTime(int days, int hours, int minutes, int seconds, int milliseconds)
-{
-	m_ticks = (
-		days * MILLISECONDS_PER_DAY +
-		hours * MILLISECONDS_PER_HOUR +
-		minutes * MILLISECONDS_PER_MINUTE +
-		seconds * MILLISECONDS_PER_SECOND +
-		milliseconds);
-	m_days = (days);
-	m_hours = (hours);
-	m_minutes = (minutes);
-	m_seconds = (seconds);
-	m_milliseconds = (milliseconds);
-	m_totalDays = (double(m_ticks) / MILLISECONDS_PER_DAY);
-	m_totalHours = (double(m_ticks) / MILLISECONDS_PER_HOUR);
-	m_totalMinutes = (double(m_ticks) / MILLISECONDS_PER_MINUTE);
-	m_totalSeconds = (double(m_ticks) / MILLISECONDS_PER_SECOND);
-	m_totalMilliseconds = (m_ticks);
 }
 
 TimeSpan TimeSpan::FromDays(double value)

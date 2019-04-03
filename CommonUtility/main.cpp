@@ -19,8 +19,16 @@
 
 int main()
 {
-	DateTime datetime = DateTime::Now();
-	datetime.Year;
+	DateTime now = DateTime::Now();
+	DateTime today = DateTime::Today();
+	DateTime utc = DateTime::UtcNow();
+	DateTime local = utc.ToLocalTime();
+	DateTime universal = now.ToUniversalTime();
+	std::string longDateString = now.ToLongDateString();
+	std::string longTimeString = now.ToLongTimeString();
+	std::string shortDateString = now.ToShortDateString();
+	std::string shortTimeString = now.ToShortTimeString();
+	std::string strDateTime = now.ToString("%Y-%m-%d %H:%M:%S %a");
 
 #if TEST_ANY
 	try

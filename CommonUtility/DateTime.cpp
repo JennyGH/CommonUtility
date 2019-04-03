@@ -19,15 +19,57 @@ Millisecond(m_millisecond),\
 DayOfWeek(m_dayOfWeek),\
 Kind(m_kind)\
 
-#define UPDATE_TICKS(ticks) \
-do\
-{\
-	ticks = ParseTicks(m_year, m_month, m_day, m_hour, m_minute, m_second, m_millisecond);\
-} while (0)
+time_t ParseTicksFromDateTime(
+	int year, int month, int day,
+	int hour, int minute, int second,
+	enum DayOfWeek& wday)
+{
+	tm temp;
+	temp.tm_year = year - 1900;
+	temp.tm_mon = month - 1;
+	temp.tm_mday = day;
+	temp.tm_hour = hour;
+	temp.tm_min = minute;
+	temp.tm_sec = second;
 
+	//处理星期几
+	time_t ticks = mktime(&temp);
+	localtime_s(&temp, &ticks);
+	wday = static_cast<enum DayOfWeek>(temp.tm_wday);
 
+	return ticks;
+}
 
-time_t ParseTicks(int year, int month, int day, int hour, int minute, int second, int millisecond) { return 0; }
+void ParseDateTimeFromTicks(
+	DateTimeKind kind,
+	time_t ticks,
+	int& year, int& month, int& day,
+	int& hour, int& minute, int& second,
+	enum DayOfWeek& wday)
+{
+	tm temp;
+
+	switch (kind)
+	{
+	case Utc:
+		gmtime_s(&temp, &ticks);
+		break;
+	case Local:
+		localtime_s(&temp, &ticks);
+		break;
+	default:
+		localtime_s(&temp, &ticks);
+		break;
+	}
+
+	year = temp.tm_year + 1900;
+	month = temp.tm_mon + 1;
+	day = temp.tm_mday;
+	hour = temp.tm_hour;
+	minute = temp.tm_min;
+	second = temp.tm_sec;
+	wday = static_cast<enum DayOfWeek>(temp.tm_wday);
+}
 
 
 DateTime::DateTime() :
@@ -43,6 +85,12 @@ DateTime::DateTime() :
 	m_kind(DateTimeKind::Unspecified),
 	INIT_CONST_REFERENCES
 {
+	ParseDateTimeFromTicks(
+		m_kind,
+		m_ticks,
+		m_year, m_month, m_day,
+		m_hour, m_minute, m_second,
+		m_dayOfWeek);
 }
 
 
@@ -63,6 +111,12 @@ DateTime::DateTime(time_t ticks) :
 	m_dayOfWeek(DayOfWeek::Sunday),
 	m_kind(DateTimeKind::Unspecified)
 {
+	ParseDateTimeFromTicks(
+		m_kind,
+		m_ticks,
+		m_year, m_month, m_day,
+		m_hour, m_minute, m_second,
+		m_dayOfWeek);
 }
 
 DateTime::DateTime(time_t ticks, DateTimeKind kind) :
@@ -78,6 +132,12 @@ DateTime::DateTime(time_t ticks, DateTimeKind kind) :
 	m_dayOfWeek(DayOfWeek::Sunday),
 	m_kind(kind)
 {
+	ParseDateTimeFromTicks(
+		m_kind,
+		m_ticks,
+		m_year, m_month, m_day,
+		m_hour, m_minute, m_second,
+		m_dayOfWeek);
 }
 
 DateTime::DateTime(int year, int month, int day) :
@@ -93,6 +153,7 @@ DateTime::DateTime(int year, int month, int day) :
 	m_dayOfWeek(DayOfWeek::Sunday),
 	m_kind(DateTimeKind::Unspecified)
 {
+	m_ticks = ParseTicksFromDateTime(m_year, m_month, m_day, m_hour, m_minute, m_second, m_dayOfWeek);
 }
 
 DateTime::DateTime(int year, int month, int day, int hour, int minute, int second) :
@@ -108,6 +169,7 @@ DateTime::DateTime(int year, int month, int day, int hour, int minute, int secon
 	m_dayOfWeek(DayOfWeek::Sunday),
 	m_kind(DateTimeKind::Unspecified)
 {
+	m_ticks = ParseTicksFromDateTime(m_year, m_month, m_day, m_hour, m_minute, m_second, m_dayOfWeek);
 }
 
 DateTime::DateTime(int year, int month, int day, int hour, int minute, int second, DateTimeKind kind) :
@@ -138,6 +200,7 @@ DateTime::DateTime(int year, int month, int day, int hour, int minute, int secon
 	m_dayOfWeek(DayOfWeek::Sunday),
 	m_kind(DateTimeKind::Unspecified)
 {
+	m_ticks = ParseTicksFromDateTime(m_year, m_month, m_day, m_hour, m_minute, m_second, m_dayOfWeek);
 }
 
 DateTime::DateTime(int year, int month, int day, int hour, int minute, int second, int millisecond, DateTimeKind kind) :
@@ -153,6 +216,7 @@ DateTime::DateTime(int year, int month, int day, int hour, int minute, int secon
 	m_dayOfWeek(DayOfWeek::Sunday),
 	m_kind(kind)
 {
+	m_ticks = ParseTicksFromDateTime(m_year, m_month, m_day, m_hour, m_minute, m_second, m_dayOfWeek);
 }
 
 
@@ -181,8 +245,9 @@ DateTime & DateTime::operator=(const DateTime & that)
 		m_hour = that.m_hour;
 		m_minute = that.m_minute;
 		m_second = that.m_second;
-		m_millisecond = that.m_millisecond;
 		m_dayOfWeek = that.m_dayOfWeek;
+		m_ticks = that.m_ticks;
+		m_millisecond = that.m_millisecond;
 		m_kind = that.m_kind;
 	}
 	return *this;
@@ -190,26 +255,38 @@ DateTime & DateTime::operator=(const DateTime & that)
 
 DateTime & DateTime::operator+(const DateTime & that)
 {
-	m_year += that.m_year;
-	m_month += that.m_month;
-	m_day += that.m_day;
-	m_hour += that.m_hour;
-	m_minute += that.m_minute;
-	m_second += that.m_second;
-	m_millisecond += that.m_millisecond;
+	m_ticks += that.m_ticks;
+
+	if (m_ticks < 0)
+	{
+		m_ticks = 0;
+	}
+
+	ParseDateTimeFromTicks(
+		m_kind,
+		m_ticks,
+		m_year, m_month, m_day,
+		m_hour, m_minute, m_second,
+		m_dayOfWeek);
 
 	return *this;
 }
 
 DateTime & DateTime::operator-(const DateTime & that)
 {
-	m_year -= that.m_year;
-	m_month -= that.m_month;
-	m_day -= that.m_day;
-	m_hour -= that.m_hour;
-	m_minute -= that.m_minute;
-	m_second -= that.m_second;
-	m_millisecond -= that.m_millisecond;
+	m_ticks -= that.m_ticks;
+
+	if (m_ticks < 0)
+	{
+		m_ticks = 0;
+	}
+
+	ParseDateTimeFromTicks(
+		m_kind,
+		m_ticks,
+		m_year, m_month, m_day,
+		m_hour, m_minute, m_second,
+		m_dayOfWeek);
 
 	return *this;
 }
@@ -247,64 +324,138 @@ bool DateTime::operator!=(const DateTime & that)
 DateTime & DateTime::AddTicks(time_t value)
 {
 	m_ticks += value;
+	if (m_ticks < 0)
+	{
+		m_ticks = 0;
+	}
+
+	ParseDateTimeFromTicks(
+		m_kind,
+		m_ticks,
+		m_year, m_month, m_day,
+		m_hour, m_minute, m_second,
+		m_dayOfWeek);
+
 	return *this;
 }
 
 DateTime & DateTime::AddYears(int value)
 {
 	m_year += value;
-	UPDATE_TICKS(m_ticks);
+	m_ticks = ParseTicksFromDateTime(
+		m_year, m_month, m_day,
+		m_hour, m_minute, m_second,
+		m_dayOfWeek);
 	return *this;
 }
 
 DateTime & DateTime::AddMonths(int value)
 {
 	m_month += value;
-	UPDATE_TICKS(m_ticks);
+	m_ticks = ParseTicksFromDateTime(
+		m_year, m_month, m_day,
+		m_hour, m_minute, m_second,
+		m_dayOfWeek);
 	return *this;
 }
 
 DateTime & DateTime::AddDays(double value)
 {
-	m_ticks += value * SECONDS_PER_DAY;
-	UPDATE_TICKS(m_ticks);
-	return *this;
+	return AddSeconds(value * SECONDS_PER_DAY);
 }
 
 DateTime & DateTime::AddHours(double value)
 {
-	m_ticks += value * SECONDS_PER_HOUR;
-	UPDATE_TICKS(m_ticks);
-	return *this;
+	return AddSeconds(value * SECONDS_PER_HOUR);
 }
 
 DateTime & DateTime::AddMinutes(double value)
 {
-	m_ticks += value * SECONDS_PER_MINUTE;
-	UPDATE_TICKS(m_ticks);
-	return *this;
+	return AddSeconds(value * SECONDS_PER_MINUTE);
 }
 
 DateTime & DateTime::AddSeconds(double value)
 {
-	int second = value;
-	int millisecond = (value - second) * 1000;
-	m_second += second;
-	m_millisecond += millisecond;
-	UPDATE_TICKS(m_ticks);
+	double seconds = (m_ticks + value);
+	m_ticks = seconds;
+	m_millisecond = (seconds - m_ticks) * 1000;
+
+	ParseDateTimeFromTicks(
+		m_kind,
+		m_ticks,
+		m_year, m_month, m_day,
+		m_hour, m_minute, m_second,
+		m_dayOfWeek);
+
 	return *this;
 }
 
 DateTime & DateTime::AddMilliseconds(double value)
 {
-	m_millisecond += value;
-	if (m_millisecond >= 1000)
+	return AddSeconds(value / 1000);
+}
+
+DateTime DateTime::ToLocalTime() const
+{
+	return DateTime(m_ticks, DateTimeKind::Local);
+}
+
+DateTime DateTime::ToUniversalTime() const
+{
+	return DateTime(m_ticks, DateTimeKind::Utc);
+}
+
+std::string DateTime::ToLongDateString() const
+{
+	char buffer[256] = { 0 };
+	sprintf_s(buffer, "%d年%d月%d日", m_year, m_month, m_day);
+	return buffer;
+}
+
+std::string DateTime::ToLongTimeString() const
+{
+	char buffer[256] = { 0 };
+	sprintf_s(buffer, "%d:%d:%d", m_hour, m_minute, m_second);
+	return buffer;
+}
+
+std::string DateTime::ToShortDateString() const
+{
+	char buffer[256] = { 0 };
+	sprintf_s(buffer, "%d/%d/%d", m_year, m_month, m_day);
+	return buffer;
+}
+
+std::string DateTime::ToShortTimeString() const
+{
+	char buffer[256] = { 0 };
+	sprintf_s(buffer, "%d:%d", m_hour, m_minute);
+	return buffer;
+}
+
+std::string DateTime::ToString(const std::string & format) const
+{
+	if (format.empty())
 	{
-		AddSeconds(m_millisecond / 1000);
-		m_millisecond = m_millisecond % 1000;
+		return "";
 	}
-	UPDATE_TICKS(m_ticks);
-	return *this;
+
+	char buffer[256] = { 0 };
+	tm temp;
+	switch (m_kind)
+	{
+	case Utc:
+		gmtime_s(&temp, &m_ticks);
+		break;
+	case Local:
+		localtime_s(&temp, &m_ticks);
+		break;
+	default:
+		localtime_s(&temp, &m_ticks);
+		break;
+	}
+	size_t rv = strftime(buffer, 256, format.c_str(), &temp);
+	return std::string(buffer, rv);
 }
 
 DateTime DateTime::Now()

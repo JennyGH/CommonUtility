@@ -10,12 +10,12 @@
 #include "Any.hpp"
 #include "DateTime.h"
 
-#define TEST_ANY 1
-#define TEST_GUID 1
-#define TEST_CONVERT 1
-#define TEST_ENCODING 1
-#define TEST_REGISTRY 1
-#define TEST_INTEGER 1
+#define TEST_ANY 0
+#define TEST_GUID 0
+#define TEST_CONVERT 0
+#define TEST_ENCODING 0
+#define TEST_REGISTRY 0
+#define TEST_INTEGER 0
 
 int main()
 {
@@ -29,6 +29,15 @@ int main()
 	std::string shortDateString = now.ToShortDateString();
 	std::string shortTimeString = now.ToShortTimeString();
 	std::string strDateTime = now.ToString("%Y-%m-%d %H:%M:%S %a");
+
+	TimeSpan::MaxValue;
+	TimeSpan::MinValue;
+	TimeSpan timeSpan0(1, 2, 3, 4, 5);
+	TimeSpan timeSpan1(6, 7, 8, 9, 10);
+	TimeSpan timeSpan2(3600 * 1000);
+	TimeSpan aaa = timeSpan0 - timeSpan1;
+	TimeSpan duration = aaa.Duration();
+	TimeSpan negate = aaa.Negate();
 
 #if TEST_ANY
 	try

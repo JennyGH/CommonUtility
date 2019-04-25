@@ -9,6 +9,7 @@
 #include "Guid.h"
 #include "Any.hpp"
 #include "DateTime.h"
+#include "LogStream.h"
 
 #define TEST_ANY 0
 #define TEST_GUID 0
@@ -16,9 +17,18 @@
 #define TEST_ENCODING 0
 #define TEST_REGISTRY 0
 #define TEST_INTEGER 0
+#define TEST_DATETIME 0
+#define TEST_LOGSTREAM 0
 
 int main()
 {
+	//LogStreamManager::Get().SetLevel(Info);
+	LOG_DEBUG << 123;
+	LOG_DEBUG << "dubingjian";
+	LOG_INFO << "dubingjian";
+	LOG_ERROR << "dubingjian";
+
+#if TEST_DATETIME
 	DateTime now = DateTime::Now();
 	DateTime today = DateTime::Today();
 	DateTime utc = DateTime::UtcNow();
@@ -39,6 +49,7 @@ int main()
 	timeSpan0.Subtract(timeSpan1);
 	TimeSpan duration = aaa.Duration();
 	TimeSpan negate = aaa.Negate();
+#endif // TEST_DATETIME
 
 #if TEST_ANY
 	try
@@ -52,7 +63,7 @@ int main()
 	catch (const bad_any_cast& ex)
 	{
 		printf(ex.what());
-	}
+}
 #endif // TEST_ANY
 
 #if TEST_GUID

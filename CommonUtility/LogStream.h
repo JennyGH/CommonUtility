@@ -2,20 +2,29 @@
 #include <fstream>
 #include <ctime>
 
-#define LOG_DEBUG (LogStreamManager::Get().GetStream(Debug))
-#define LOG_INFO  (LogStreamManager::Get().GetStream(Info))
-#define LOG_ERROR (LogStreamManager::Get().GetStream(Error))
+#define LOG_DEBUG (LogStreamWrapper::Get().GetStream(Debug) << "[" << __FUNCTION__ << "] ")
+#define LOG_INFO  (LogStreamWrapper::Get().GetStream( Info) << "[" << __FUNCTION__ << "] ")
+#define LOG_ERROR (LogStreamWrapper::Get().GetStream(Error) << "[" << __FUNCTION__ << "] ")
+
+#ifndef WIN32
+#define localtime_s(refTm, refTime) localtime_r(refTime, refTm)
+#endif // !WIN32
 
 #define __OUTPUT_LOG__(stream, val) \
 do{\
-	if (LogStreamManager::Get().GetLevel() > m_level){return stream;}\
+	if (LogStreamWrapper::Get().GetLevel() > m_level){return stream;}\
+	tm temp;\
+	time_t now = time(NULL);\
+	localtime_s(&temp, &now);\
+	char strtime[256] = { 0 };\
+	size_t rv = strftime(strtime, 256, "%H:%M:%S", &temp);\
 	switch (m_level)\
 	{\
-	case Debug: return (stream << "[DEBUG] " << val).flush();\
-	case Info:  return (stream << "[INFO]  " << val).flush();\
-	case Error: return (stream << "[ERROR] " << val).flush();\
+	case Debug: return (stream << "[" << strtime << "]" << "[DEBUG] " << val).flush();\
+	case Info:  return (stream << "[" << strtime << "]" << "[INFO]  " << val).flush();\
+	case Error: return (stream << "[" << strtime << "]" << "[ERROR] " << val).flush();\
 	}\
-	return (stream << "[INFO]  " << val).flush();\
+	return (stream << "[" << strtime << "]" << "[INFO]  " << val).flush();\
 } while (0)
 
 enum LogLevel
@@ -26,15 +35,18 @@ enum LogLevel
 };
 
 class LogStream;
-class LogStreamManager
+class LogStreamWrapper
 {
-	LogStreamManager();
+	LogStreamWrapper();
+	LogStreamWrapper(const LogStreamWrapper&);
+	LogStreamWrapper& operator= (const LogStreamWrapper&);
 public:
-	static LogStreamManager& Get();
+	static LogStreamWrapper& Get();
 	LogStream GetStream(LogLevel level);
 	LogLevel GetLevel() const;
-	LogStreamManager& SetLevel(LogLevel level);
-	~LogStreamManager();
+	LogStreamWrapper& SetLevel(LogLevel level);
+	LogStreamWrapper& SetPath(const std::string& path);
+	~LogStreamWrapper();
 private:
 	LogLevel m_level;
 	std::ofstream m_fout;
@@ -44,30 +56,12 @@ class LogStream
 {
 public:
 	LogStream(LogLevel level, std::ostream& stream);
+	LogStream(const LogStream& that);
 	~LogStream();
 
 	template<typename T>
 	std::ostream& operator<< (T val)
 	{
-		auto now = time(NULL);
-		tm temp;
-		localtime_s(&temp, &now);
-		{
-			tm* ptm = NULL;
-			ptm = localtime(&now);
-			temp.tm_year = ptm->tm_year;
-			temp.tm_mon = ptm->tm_mon;
-			temp.tm_mday = ptm->tm_mday;
-			temp.tm_wday = ptm->tm_wday;
-			temp.tm_yday = ptm->tm_yday;
-			temp.tm_hour = ptm->tm_hour;
-			temp.tm_min = ptm->tm_min;
-			temp.tm_sec = ptm->tm_sec;
-			temp.tm_isdst = ptm->tm_isdst;
-		}
-		temp = *localtime(&now);
-		char buffer[256] = { 0 };
-		size_t rv = strftime(buffer, 256, "%H:%M:%S", &temp);
 		__OUTPUT_LOG__(m_stream, val);
 	}
 

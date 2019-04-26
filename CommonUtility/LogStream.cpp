@@ -2,35 +2,60 @@
 #include "LogStream.h"
 #include <ctime>
 
-LogStreamManager::LogStreamManager() :
-	m_level(Debug),
-	m_fout("test_log.log", std::ios::out | std::ios::binary | std::ios::app)
+LogStreamWrapper::LogStreamWrapper() :
+	m_level(Debug)
 {
 }
 
-LogStreamManager & LogStreamManager::Get()
+LogStreamWrapper::LogStreamWrapper(const LogStreamWrapper &)
 {
-	static LogStreamManager lm;
+}
+
+LogStreamWrapper & LogStreamWrapper::operator=(const LogStreamWrapper &)
+{
+	return *this;
+}
+
+LogStreamWrapper & LogStreamWrapper::Get()
+{
+	static LogStreamWrapper lm;
 	return lm;
 }
 
-LogStream LogStreamManager::GetStream(LogLevel level)
+LogStream LogStreamWrapper::GetStream(LogLevel level)
 {
-	return LogStream(level, m_fout);
+	if (m_fout)
+	{
+		return LogStream(level, m_fout);
+	}
+	return LogStream(level, std::cout);
 }
 
-LogLevel LogStreamManager::GetLevel() const
+LogLevel LogStreamWrapper::GetLevel() const
 {
 	return m_level;
 }
 
-LogStreamManager & LogStreamManager::SetLevel(LogLevel level)
+LogStreamWrapper & LogStreamWrapper::SetLevel(LogLevel level)
 {
 	m_level = level;
 	return *this;
 }
 
-LogStreamManager::~LogStreamManager()
+LogStreamWrapper & LogStreamWrapper::SetPath(const std::string & path)
+{
+	if (!path.empty())
+	{
+		if (m_fout)
+		{
+			m_fout.close();
+		}
+		m_fout.open(path.c_str(), std::ios::out | std::ios::binary | std::ios::app);
+	}
+	return *this;
+}
+
+LogStreamWrapper::~LogStreamWrapper()
 {
 	if (m_fout)
 	{
@@ -44,9 +69,15 @@ LogStream::LogStream(LogLevel level, std::ostream& stream) :
 {
 }
 
+LogStream::LogStream(const LogStream & that) :
+	m_level(that.m_level),
+	m_stream(that.m_stream)
+{
+}
+
 LogStream::~LogStream()
 {
-	if (LogStreamManager::Get().GetLevel() <= m_level)
+	if (LogStreamWrapper::Get().GetLevel() <= m_level)
 	{
 		(m_stream << std::endl).flush();
 	}

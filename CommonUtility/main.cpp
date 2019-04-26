@@ -22,7 +22,8 @@
 
 int main()
 {
-	//LogStreamManager::Get().SetLevel(Info);
+	//LogStreamWrapper::Get().SetLevel(Info);
+	//LogStreamWrapper::Get().SetPath("temp.log");
 	LOG_DEBUG << 123;
 	LOG_DEBUG << "dubingjian";
 	LOG_INFO << "dubingjian";

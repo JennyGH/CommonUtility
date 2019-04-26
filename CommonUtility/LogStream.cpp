@@ -24,7 +24,7 @@ LogStreamWrapper & LogStreamWrapper::Get()
 
 LogStream LogStreamWrapper::GetStream(LogLevel level)
 {
-	if (m_fout)
+	if (m_fout.is_open())
 	{
 		return LogStream(level, m_fout);
 	}

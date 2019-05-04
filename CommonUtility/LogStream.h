@@ -6,7 +6,7 @@
 #define LOG_INFO  (LogStreamWrapper::Get().GetStream( Info) << "[" << __FUNCTION__ << "] ")
 #define LOG_ERROR (LogStreamWrapper::Get().GetStream(Error) << "[" << __FUNCTION__ << "] ")
 
-#ifndef WIN32
+#if !defined(WIN32) && !defined(_WIN32)
 #define localtime_s(refTm, refTime) localtime_r(refTime, refTm)
 #endif // !WIN32
 

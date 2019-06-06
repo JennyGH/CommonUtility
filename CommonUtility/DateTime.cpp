@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "DateTime.h"
 
-#ifndef WIN32
+#if !defined(WIN32) && !defined(_WIN32)
 #define sprintf_s(buffer, fmt, ...) sprintf(buffer, fmt, ##__VA_ARGS__)
 static inline void assign_tm(struct tm* const from, struct tm* const to)
 {

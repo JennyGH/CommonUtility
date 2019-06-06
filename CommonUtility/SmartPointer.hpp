@@ -141,6 +141,12 @@ namespace common
 				return *(m_pPtr->object());
 			}
 
+			template<typename _Cast>
+			_Cast* cast()
+			{
+				return static_cast<_Cast*>(m_pPtr->object());
+			}
+
 			bool operator== (const void* ptr) const
 			{
 				if (ptr == this)

@@ -164,6 +164,7 @@
     <ClInclude Include="SmartPointer.hpp" />
     <ClInclude Include="String.hpp" />
     <ClInclude Include="StringBuilder.hpp" />
+    <ClInclude Include="ThreadLocalStorage.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Convert.cpp" />

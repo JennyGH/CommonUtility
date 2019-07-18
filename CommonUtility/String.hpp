@@ -81,9 +81,9 @@ namespace common
 				return *this;
 			}
 
-			string& split(const string_t& separator, std::list<string>& output)
+			std::list<string> split(const string_t& separator) const
 			{
-				output.clear();
+				std::list<string> output;
 				typename string_t::size_type current = 0;
 				typename string_t::size_type end = -1;
 				typename string_t::size_type len = separator.length();
@@ -108,15 +108,14 @@ namespace common
 					}
 				}
 
-				return *this;
+				return output;
 			}
 
 			string& replace(const string& from, const string& to)
 			{
 				string& me = *this;
 				typename string_t::size_type total = 0;
-				split_res_t split_res;
-				split(from, split_res);
+				split_res_t split_res = split(from);
 				for (typename split_res_t::const_iterator iter = split_res.begin(); iter != split_res.end(); ++iter)
 				{
 					total += iter->length();

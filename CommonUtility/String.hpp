@@ -29,25 +29,25 @@ namespace common
 			string(const std::istreambuf_iterator<_Chr>& begin, const std::istreambuf_iterator<_Chr>& end) : string_t(begin, end) {};
 			~string() {};
 
-#define __remove(target)\
-do{\
-	typename string_t::size_type _pos = this->find(target);\
-	while (_pos != string_t::npos)\
-	{\
-		this->erase(this->begin() + _pos);\
-		_pos = this->find(target);\
-	}\
-}while (0)
-
 			string& remove(_Chr target)
 			{
-				__remove(target);
+				typename string_t::size_type _pos = this->find(target);
+				while (_pos != string_t::npos)
+				{
+					this->erase(_pos, 1);
+					_pos = this->find(target);
+				}
 				return *this;
 			}
 
 			string& remove(const string_t& target)
 			{
-				__remove(target);
+				typename string_t::size_type _pos = this->find(target);
+				while (_pos != string_t::npos)
+				{
+					this->erase(_pos, target.length());
+					_pos = this->find(target);
+				}
 				return *this;
 			}
 

@@ -1,6 +1,6 @@
 #pragma once
 #include <map>
-#include "LinuxMapping.h"
+#include <Windows.h>
 
 template<typename T>
 class ThreadLocalStorage
@@ -9,45 +9,48 @@ public:
 	typedef unsigned long ThreadID;
 	typedef T ThreadData;
 private:
-	ThreadLocalStorage();
+	ThreadLocalStorage() {}
 public:
-	static ThreadLocalStorage& Get();
-	~ThreadLocalStorage();
+	static ThreadLocalStorage& Instance()
+	{
+		static ThreadLocalStorage<T> tls;
+		return tls;
+	}
 
-	ThreadData Store(const ThreadData& data);
-	ThreadData GetData() const;
-	std::size_t Size() const;
+	~ThreadLocalStorage()
+	{
+	}
+
+	ThreadData Store(const ThreadData& data)
+	{
+		return (m_storage[::GetCurrentThreadId()] = data);
+	}
+
+	ThreadData Get()
+	{
+		return m_storage[::GetCurrentThreadId()];
+	}
+
+	ThreadData& Reference()
+	{
+		return m_storage[::GetCurrentThreadId()];
+	}
+
+	const ThreadData& ConstReference()
+	{
+		return m_storage[::GetCurrentThreadId()];
+	}
+
+	operator ThreadData()
+	{
+		return Get();
+	}
+
+	std::size_t Size() const
+	{
+		return m_storage.size();
+	}
 
 private:
 	std::map<ThreadID, ThreadData> m_storage;
 };
-
-template<typename T>
-inline ThreadLocalStorage<T> & ThreadLocalStorage<T>::Get()
-{
-	static ThreadLocalStorage<T> tls;
-	return tls;
-}
-
-template<typename T>
-inline ThreadLocalStorage<T>::~ThreadLocalStorage()
-{
-}
-
-template<typename T>
-inline ThreadLocalStorage<T>::ThreadData ThreadLocalStorage<T>::Store(const ThreadData & data)
-{
-	return (m_storage[::GetCurrentThreadId()] = data);
-}
-
-template<typename T>
-inline ThreadLocalStorage<T>::ThreadData ThreadLocalStorage<T>::GetData() const
-{
-	return m_storage[::GetCurrentThreadId()];
-}
-
-template<typename T>
-inline std::size_t ThreadLocalStorage<T>::Size() const
-{
-	return m_storage.size();
-}

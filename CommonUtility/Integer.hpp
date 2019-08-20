@@ -1,4 +1,31 @@
 #pragma once
+#include <string>
+
+template<typename T>
+struct _Default
+{
+	static std::string ToString(T val) { return std::string(); }
+	static T FromString(const std::string& src) { return T(); }
+};
+
+#define RETURN_FORMATED_STRING(bufferSize, format, val) \
+do{\
+	char _buffer[bufferSize] = { 0 };\
+	sprintf_s(_buffer, format, val);\
+	return _buffer;\
+} while (0)
+
+
+#define DECLARE_DEFAULT(type, format) \
+template<>struct _Default<type>{\
+static std::string ToString(type val) { RETURN_FORMATED_STRING(64, format, val); }\
+static type FromString(const std::string& src) { type val = type(); sscanf_s(src.c_str(), format, &val); return val;  }\
+}
+
+DECLARE_DEFAULT(short, "%d");
+DECLARE_DEFAULT(int, "%d");
+DECLARE_DEFAULT(long, "%ld");
+DECLARE_DEFAULT(long long, "%lld");
 
 template<typename T> class Integer;
 typedef Integer<short> Short;
@@ -21,8 +48,8 @@ public:
 	Integer(const unsigned char src[]);
 	~Integer();
 	operator T() const;
-	operator const char*() const;
-	const char* ToString(const char fmt[] = NULL) const;
+	operator std::string() const;
+	std::string ToString(const std::string& fmt = "") const;
 private:
 	T m_val;
 };
@@ -40,22 +67,7 @@ inline T Integer<T>::FromString(const char src[], const char fmt[])
 
 	if (NULL == fmt)
 	{
-		if (typeid(T) == typeid(short))
-		{
-			sscanf_s(src, "%d", &val);
-		}
-		else if (typeid(T) == typeid(int))
-		{
-			sscanf_s(src, "%d", &val);
-		}
-		else if (typeid(T) == typeid(long))
-		{
-			sscanf_s(src, "%ld", &val);
-		}
-		else if (typeid(T) == typeid(long long))
-		{
-			sscanf_s(src, "%lld", &val);
-		}
+		return _Default<T>::FromString(src);
 	}
 	else
 	{
@@ -98,39 +110,18 @@ inline Integer<T>::operator T() const
 }
 
 template<typename T>
-inline Integer<T>::operator const char*() const
+inline Integer<T>::operator std::string() const
 {
 	return ToString();
 }
 
 template<typename T>
-inline const char * Integer<T>::ToString(const char fmt[]) const
+inline std::string Integer<T>::ToString(const std::string& fmt) const
 {
-	static char _buffer[64] = { 0 };
-
-	if (NULL == fmt)
+	if (fmt.empty())
 	{
-		if (typeid(T) == typeid(short))
-		{
-			sprintf_s(_buffer, "%d", (m_val));
-		}
-		else if (typeid(T) == typeid(int))
-		{
-			sprintf_s(_buffer, "%d", (m_val));
-		}
-		else if (typeid(T) == typeid(long))
-		{
-			sprintf_s(_buffer, "%ld", (m_val));
-		}
-		else if (typeid(T) == typeid(long long))
-		{
-			sprintf_s(_buffer, "%lld", (m_val));
-		}
-	}
-	else
-	{
-		sprintf_s(_buffer, fmt, (m_val));
+		return _Default<T>::ToString(m_val);
 	}
 
-	return _buffer;
+	RETURN_FORMATED_STRING(64, fmt.c_str(), m_val);
 }

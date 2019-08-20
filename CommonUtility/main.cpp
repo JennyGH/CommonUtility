@@ -16,7 +16,7 @@
 #define TEST_CONVERT 0
 #define TEST_ENCODING 0
 #define TEST_REGISTRY 0
-#define TEST_INTEGER 0
+#define TEST_INTEGER 1
 #define TEST_DATETIME 0
 #define TEST_LOGSTREAM 0
 
@@ -24,10 +24,10 @@ int main()
 {
 	//LogStreamWrapper::Get().SetLevel(Info);
 	//LogStreamWrapper::Get().SetPath("temp.log");
-	LOG_DEBUG << 123;
-	LOG_DEBUG << "dubingjian";
-	LOG_INFO << "dubingjian";
-	LOG_ERROR << "dubingjian";
+	//LOG_DEBUG << 123;
+	//LOG_DEBUG << "dubingjian";
+	//LOG_INFO << "dubingjian";
+	//LOG_ERROR << "dubingjian";
 
 #if TEST_DATETIME
 	DateTime now = DateTime::Now();
@@ -129,7 +129,7 @@ int main()
 	Int64 a("1024");
 	Short max = Short::Min;
 	std::string str2(a);
-	printf("%s", str.c_str());
+	printf("%s", str2.c_str());
 #endif // TEST_INTEGER
 
 	return 0;

@@ -6,7 +6,7 @@
 #include <iomanip>
 #include <iostream>
 
-typedef std::ios_base&(__CLRCALL_OR_CDECL io_opt_t)(std::ios_base&);
+typedef std::ios_base&(io_opt_t)(std::ios_base&);
 
 
 class ArgumentNotFoundException : public std::exception

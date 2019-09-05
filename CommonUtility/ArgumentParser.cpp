@@ -41,7 +41,7 @@ std::string ArgumentParser::getApplicationName() const
 }
 
 ArgumentNotFoundException::ArgumentNotFoundException(const std::string & moduleName, const std::string & optionName) :
-	std::exception(("The `" + optionName + "` is requeired.").c_str()),
+	std::exception(std::logic_error(("The `" + optionName + "` is requeired.").c_str())),
 	m_moduleName(moduleName)
 {
 }

@@ -152,6 +152,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Any.hpp" />
+    <ClInclude Include="ArgumentParser.h" />
     <ClInclude Include="Convert.h" />
     <ClInclude Include="DateTime.h" />
     <ClInclude Include="Encoding.h" />
@@ -167,6 +168,7 @@
     <ClInclude Include="ThreadLocalStorage.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ArgumentParser.cpp" />
     <ClCompile Include="Convert.cpp" />
     <ClCompile Include="DateTime.cpp" />
     <ClCompile Include="Encoding.cpp" />

@@ -57,6 +57,9 @@
     <ClInclude Include="ThreadLocalStorage.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="ArgumentParser.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -81,6 +84,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="LogStream.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="ArgumentParser.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

@@ -10,6 +10,7 @@
 #include "Any.hpp"
 #include "DateTime.h"
 #include "LogStream.h"
+#include "ArgumentParser.h"
 
 #define TEST_ANY 0
 #define TEST_GUID 0
@@ -20,14 +21,48 @@
 #define TEST_DATETIME 0
 #define TEST_LOGSTREAM 0
 
-int main()
+int main(int argc, char* argv[])
 {
+	ArgumentParser arguments(argc, argv);
+
+	try
+	{
+		auto integer = arguments.get<int>("int", 0);
+		auto doubleValue = arguments.get<double>("double", 0.00);
+		auto boolean = arguments.get<bool>("boolean", false);
+		auto string = arguments.get<std::string>("string", "");
+		auto not_exist = arguments.get<std::string>("not-exist");
+	}
+	catch (const ArgumentNotFoundException& ex)
+	{
+
+		Manual manual;
+		manual.Add("int", false, "0", "Integer option");
+		manual.Add("double", false, "0", "Double option");
+		manual.Add("boolean", false, "0", "Boolean option");
+		manual.Add("string", false, "0", "String option");
+		manual.Add("not-exist", true, "0", "Required option");
+
+		printf(
+			"[ArgumentNotFoundException]: %s\r\n"
+			"Manual: \r\n"
+			"%s"
+			, ex.what(), manual.ToString().c_str());
+	}
+	catch (const std::exception& ex)
+	{
+		printf("[std::exception]: %s\r\n", ex.what());
+	}
+
 	//LogStreamWrapper::Get().SetLevel(Info);
 	//LogStreamWrapper::Get().SetPath("temp.log");
 	//LOG_DEBUG << 123;
 	//LOG_DEBUG << "dubingjian";
 	//LOG_INFO << "dubingjian";
 	//LOG_ERROR << "dubingjian";
+
+	auto str = Integer<time_t>(DateTime::Now().UnixTimeStamp).ToString("%016X");
+	DateTime fromStr(Integer<time_t>(str.c_str(), "%016X"));
 
 #if TEST_DATETIME
 	DateTime now = DateTime::Now();
@@ -133,4 +168,4 @@ int main()
 #endif // TEST_INTEGER
 
 	return 0;
-}
+	}

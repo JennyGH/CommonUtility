@@ -1,6 +1,11 @@
 #pragma once
 #include <map>
+#if defined(WIN32) || defined(_WIN32)
 #include <Windows.h>
+#else
+#include <pthread.h>
+#define GetCurrentThreadId pthread_self
+#endif
 
 template<typename T>
 class ThreadLocalStorage
@@ -13,8 +18,12 @@ private:
 public:
 	static ThreadLocalStorage& Instance()
 	{
-		static ThreadLocalStorage<T> tls;
-		return tls;
+		static ThreadLocalStorage<T>* tls = nullptr;
+		if (nullptr == tls)
+		{
+			tls = new ThreadLocalStorage<T>();
+		}
+		return *tls;
 	}
 
 	~ThreadLocalStorage()

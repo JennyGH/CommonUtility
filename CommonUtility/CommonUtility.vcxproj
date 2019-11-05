@@ -158,6 +158,7 @@
     <ClInclude Include="Encoding.h" />
     <ClInclude Include="Guid.h" />
     <ClInclude Include="Integer.hpp" />
+    <ClInclude Include="JavaMethod.hpp" />
     <ClInclude Include="LogStream.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Registry.h" />

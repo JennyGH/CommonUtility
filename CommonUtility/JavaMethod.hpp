@@ -1,32 +1,44 @@
 #pragma once
 #include <jni.h>
-#include <map>
 #include <string>
 
-enum JavaTypeName
+namespace Java
 {
-	_Void = 0,
-	_Int,
-	_Long,
-	_Object
-};
-static std::map<JavaTypeName, const char*> g_javaTypeNameMap = {
-	{_Void,			"V"},
-	{_Int,			"I"},
-	{_Long,			"J"},
-	{_Object,		"Ljava/lang/Object;"},
-};
+	enum TypeEnum
+	{
+		_Void = 0,
+		_Int,
+		_Long,
+		_Object
+	};
+}
 
-template<typename T>
-struct JavaType { };
-template<>
-struct JavaType<int> { static const JavaTypeName Name = _Int; };
-template<>
-struct JavaType<long> { static const JavaTypeName Name = _Long; };
-template<>
-struct JavaType<void> { static const JavaTypeName Name = _Void; };
-template<>
-struct JavaType<jobject> { static const JavaTypeName Name = _Object; };
+namespace Java
+{
+	template<typename T>
+	struct Type { };
+#define DECLARE_TYPE(type, enumVal) \
+template<> struct Type<type> { static const TypeEnum Name = enumVal; }
+
+	DECLARE_TYPE(int, _Int);
+	DECLARE_TYPE(long, _Long);
+	DECLARE_TYPE(void, _Void);
+	DECLARE_TYPE(jobject, _Object);
+}
+
+namespace Java
+{
+	class MethodBase
+	{
+	public:
+		MethodBase(JNIEnv* env, jmethodID methodId) :m_env(env), m_methodId(methodId) {}
+		~MethodBase() = default;
+		virtual bool IsValid() const = 0;
+	protected:
+		JNIEnv* m_env;
+		jmethodID m_methodId;
+	};
+}
 
 static std::string _unpack(int count, const char* begin, ...)
 {
@@ -49,58 +61,78 @@ static std::string _unpack(int count, const char* begin, ...)
 	return res;
 }
 
-class JavaMethod
+static const char* _getTypeName(Java::TypeEnum type)
 {
-public:
-	JavaMethod(JNIEnv* env, jmethodID methodId) :
-		m_env(env),
-		m_methodId(methodId)
-	{}
-	~JavaMethod() = default;
-
-	virtual bool IsValid() const = 0;
-
-protected:
-	JNIEnv* m_env;
-	jmethodID m_methodId;
-};
+	switch (type)
+	{
+	case Java::_Void: return "V";
+	case Java::_Int: return "I";
+	case Java::_Long:  return "J";
+	case Java::_Object: return "Ljava/lang/Object;";
+	}
+	return "";
+}
 
 template<typename _Return, typename ...Args>
-class JavaStaticMethod : public JavaMethod
+static std::string _getReflectionString()
 {
-public:
-	JavaStaticMethod(JNIEnv* env, const std::string& className, const std::string& methodName) :
-		JavaMethod(env, nullptr),
-		m_clazz(env->FindClass(className.c_str())),
-		m_methodSignature("(" + _unpack(sizeof...(Args), g_javaTypeNameMap[JavaType<Args>::Name]...) + ")" + g_javaTypeNameMap[JavaType<_Return>::Name])
+	return ("(" + _unpack(sizeof...(Args), _getTypeName(Java::Type<Args>::Name)...) + ")" + _getTypeName(Java::Type<_Return>::Name));
+}
+
+namespace Java
+{
+	template<typename _Return, typename ...Args>
+	struct StaticMethodInvoker {};
+#define DECLARE_INVOKER(returnType, methodName) \
+template<typename ...Args>\
+struct StaticMethodInvoker<returnType, Args...>\
+{\
+	static returnType Invoke(JNIEnv* env, jclass clazz, jmethodID methodId, Args...args) { return env->methodName(clazz, methodId, args...); }\
+}
+	DECLARE_INVOKER(void, CallStaticVoidMethod);
+	DECLARE_INVOKER(jint, CallStaticIntMethod);
+	DECLARE_INVOKER(jbyte, CallStaticByteMethod);
+	DECLARE_INVOKER(jchar, CallStaticCharMethod);
+	DECLARE_INVOKER(jlong, CallStaticLongMethod);
+	DECLARE_INVOKER(jfloat, CallStaticFloatMethod);
+	DECLARE_INVOKER(jshort, CallStaticShortMethod);
+	DECLARE_INVOKER(jdouble, CallStaticDoubleMethod);
+	DECLARE_INVOKER(jboolean, CallStaticBooleanMethod);
+
+	template<typename _Return, typename ...Args>
+	class StaticMethod : public MethodBase
 	{
-		if (nullptr != m_clazz)
+	public:
+		StaticMethod(JNIEnv* env, const std::string& className, const std::string& methodName) :
+			MethodBase(env, nullptr),
+			m_clazz(nullptr)
 		{
-			m_methodId = env->GetStaticMethodID(m_clazz, methodName.c_str(), m_methodSignature.c_str());
+			m_clazz = env->FindClass(className.c_str());
+			if (nullptr != m_clazz)
+			{
+				m_methodId = env->GetStaticMethodID(m_clazz, methodName.c_str(), _getReflectionString<_Return, Args...>().c_str());
+			}
 		}
-	}
 
-	~JavaStaticMethod() = default;
+		~StaticMethod() = default;
 
-	bool IsValid() const
-	{
-		return
-			nullptr != m_env &&
-			nullptr != m_clazz &&
-			nullptr != m_methodId &&
-			!m_methodSignature.empty();
-
-	}
-
-	void Invoke(Args...args) const
-	{
-		if (IsValid())
+		bool IsValid() const
 		{
-			m_env->CallStaticVoidMethod(m_clazz, m_methodId, args...);
+			return
+				nullptr != m_env &&
+				nullptr != m_methodId &&
+				nullptr != m_clazz;
 		}
-	}
-private:
-	jclass m_clazz;
-	std::string m_methodSignature;
-};
+
+		_Return Invoke(Args...args) const
+		{
+			return StaticMethodInvoker<_Return, Args...>::Invoke(m_env, m_clazz, m_methodId, args...);
+		}
+
+	protected:
+		jclass m_clazz;
+	};
+}
+
+
 

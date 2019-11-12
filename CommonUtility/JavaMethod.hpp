@@ -4,6 +4,11 @@
 
 namespace Java
 {
+	static JavaVM* g_jvm = nullptr;
+}
+
+namespace Java
+{
 	enum TypeEnum
 	{
 		_Void = 0,
@@ -20,8 +25,8 @@ namespace Java
 #define DECLARE_TYPE(type, enumVal) \
 template<> struct Type<type> { static const TypeEnum Name = enumVal; }
 
-	DECLARE_TYPE(int, _Int);
-	DECLARE_TYPE(long, _Long);
+	DECLARE_TYPE(jint, _Int);
+	DECLARE_TYPE(jlong, _Long);
 	DECLARE_TYPE(void, _Void);
 	DECLARE_TYPE(jobject, _Object);
 }
@@ -31,12 +36,9 @@ namespace Java
 	class MethodBase
 	{
 	public:
-		MethodBase(JNIEnv* env, jmethodID methodId) :m_env(env), m_methodId(methodId) {}
+		MethodBase() {}
 		~MethodBase() = default;
 		virtual bool IsValid() const = 0;
-	protected:
-		JNIEnv* m_env;
-		jmethodID m_methodId;
 	};
 }
 
@@ -61,6 +63,11 @@ static std::string _unpack(int count, const char* begin, ...)
 	return res;
 }
 
+static std::string _unpack(int count)
+{
+	return "";
+}
+
 static const char* _getTypeName(Java::TypeEnum type)
 {
 	switch (type)
@@ -73,22 +80,93 @@ static const char* _getTypeName(Java::TypeEnum type)
 	return "";
 }
 
-template<typename _Return, typename ...Args>
-static std::string _getReflectionString()
+namespace Java
 {
-	return ("(" + _unpack(sizeof...(Args), _getTypeName(Java::Type<Args>::Name)...) + ")" + _getTypeName(Java::Type<_Return>::Name));
+	class JniEnviroment
+	{
+	public:
+		JniEnviroment() : m_env(nullptr)
+		{
+			if (nullptr != g_jvm)
+			{
+				g_jvm->GetEnv((void**)&m_env, JNI_VERSION_1_8);
+				g_jvm->AttachCurrentThread((void**)&m_env, nullptr);
+			}
+		}
+		~JniEnviroment()
+		{
+			if (nullptr != g_jvm)
+			{
+				g_jvm->DetachCurrentThread();
+			}
+		}
+		operator JNIEnv* ()
+		{
+			return m_env;
+		}
+	private:
+		JNIEnv* m_env;
+	};
 }
+
+namespace Java
+{
+	template<class _Invoker, typename _Caller, typename _Return, typename ...Args>
+	class Method : public MethodBase
+	{
+	public:
+		using Invoker = _Invoker;
+	public:
+		static const std::string Signature;
+	public:
+		Method(const std::string& className, const std::string& methodName, const std::string& sig) :
+			MethodBase(),
+			m_className(className),
+			m_methodName(methodName),
+			m_signature(sig)
+		{}
+
+		~Method() = default;
+
+		bool IsValid() const
+		{
+			return !m_className.empty() && !m_methodName.empty() && !m_signature.empty();
+		}
+
+		_Return Invoke(Args...args) const
+		{
+			return _Invoker::Invoke(m_className, m_methodName, m_signature, args...);
+		}
+
+	protected:
+		std::string m_className;
+		std::string m_methodName;
+		std::string m_signature;
+	};
+}
+template<class _Invoker, typename _Caller, typename _Return, typename ...Args>
+const std::string Java::Method<_Invoker, _Caller, _Return, Args...>::Signature =
+("(" + _unpack(sizeof...(Args), _getTypeName(Java::Type<Args>::Name)...) + ")" + _getTypeName(Java::Type<_Return>::Name));
 
 namespace Java
 {
 	template<typename _Return, typename ...Args>
 	struct StaticMethodInvoker {};
-#define DECLARE_INVOKER(returnType, methodName) \
+
+#define DECLARE_INVOKER(returnType, functionName) \
 template<typename ...Args>\
 struct StaticMethodInvoker<returnType, Args...>\
 {\
-	static returnType Invoke(JNIEnv* env, jclass clazz, jmethodID methodId, Args...args) { return env->methodName(clazz, methodId, args...); }\
+	static returnType Invoke(const std::string& className, const std::string& methodName, const std::string& sig, Args...args)\
+	{\
+		Java::JniEnviroment enviroment;\
+		JNIEnv* env = enviroment;\
+		auto clazz = env->FindClass(className.c_str());\
+		auto methodId = env->GetStaticMethodID(clazz, methodName.c_str(), sig.c_str());\
+		return env->functionName(clazz, methodId, args...);\
+	}\
 }
+
 	DECLARE_INVOKER(void, CallStaticVoidMethod);
 	DECLARE_INVOKER(jint, CallStaticIntMethod);
 	DECLARE_INVOKER(jbyte, CallStaticByteMethod);
@@ -99,40 +177,58 @@ struct StaticMethodInvoker<returnType, Args...>\
 	DECLARE_INVOKER(jdouble, CallStaticDoubleMethod);
 	DECLARE_INVOKER(jboolean, CallStaticBooleanMethod);
 
+#undef DECLARE_INVOKER
+
+
 	template<typename _Return, typename ...Args>
-	class StaticMethod : public MethodBase
+	class StaticMethod : public Method<StaticMethodInvoker<_Return, Args...>, jclass, _Return, Args...>
 	{
+		using BaseType = Method<StaticMethodInvoker<_Return, Args...>, jclass, _Return, Args...>;
 	public:
-		StaticMethod(JNIEnv* env, const std::string& className, const std::string& methodName) :
-			MethodBase(env, nullptr),
-			m_clazz(nullptr)
-		{
-			m_clazz = env->FindClass(className.c_str());
-			if (nullptr != m_clazz)
-			{
-				m_methodId = env->GetStaticMethodID(m_clazz, methodName.c_str(), _getReflectionString<_Return, Args...>().c_str());
-			}
-		}
-
-		~StaticMethod() = default;
-
-		bool IsValid() const
-		{
-			return
-				nullptr != m_env &&
-				nullptr != m_methodId &&
-				nullptr != m_clazz;
-		}
-
-		_Return Invoke(Args...args) const
-		{
-			return StaticMethodInvoker<_Return, Args...>::Invoke(m_env, m_clazz, m_methodId, args...);
-		}
-
-	protected:
-		jclass m_clazz;
+		StaticMethod(const std::string& className, const std::string& methodName) :BaseType(className, methodName, BaseType::Signature) {}
 	};
 }
+
+//
+//namespace Java
+//{
+//	template<typename _Return, typename ...Args>
+//	struct MemberMethodInvoker {};
+//
+//#define DECLARE_INVOKER(returnType, methodName) \
+//template<typename ...Args>\
+//struct MemberMethodInvoker<returnType, Args...>\
+//{static returnType Invoke(JNIEnv* env, jobject caller, jmethodID methodId, Args...args) { return env->methodName(caller, methodId, args...); }}
+//
+//	DECLARE_INVOKER(void, CallVoidMethod);
+//	DECLARE_INVOKER(jint, CallIntMethod);
+//	DECLARE_INVOKER(jbyte, CallByteMethod);
+//	DECLARE_INVOKER(jchar, CallCharMethod);
+//	DECLARE_INVOKER(jlong, CallLongMethod);
+//	DECLARE_INVOKER(jfloat, CallFloatMethod);
+//	DECLARE_INVOKER(jshort, CallShortMethod);
+//	DECLARE_INVOKER(jdouble, CallDoubleMethod);
+//	DECLARE_INVOKER(jboolean, CallBooleanMethod);
+//
+//#undef DECLARE_INVOKER
+//
+//	template<typename _Return, typename ...Args>
+//	class MemberMethod : public Method<MemberMethodInvoker<_Return, Args...>, jobject, _Return, Args...>
+//	{
+//	public:
+//		MemberMethod(JNIEnv* env, jobject caller, const std::string& className, const std::string& methodName) :
+//			Method<MemberMethodInvoker<_Return, Args...>, jobject, _Return, Args...>(env, className, methodName)
+//		{
+//			using BaseType = Method<MemberMethodInvoker<_Return, Args...>, jobject, _Return, Args...>;
+//			BaseType::m_caller = caller;
+//			auto clazz = BaseType::m_clazz;
+//			if (nullptr != clazz)
+//			{
+//				Java::MethodBase::m_methodId = env->GetMethodID(clazz, methodName.c_str(), BaseType::Signature.c_str());
+//			}
+//		}
+//	};
+//}
 
 
 

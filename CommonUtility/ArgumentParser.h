@@ -37,6 +37,15 @@ public:
 		return val;
 	}
 
+	template<>
+	std::string get(const std::string& argumentName)
+	{
+		_checkArgument(argumentName);
+		std::string val;
+		val = m_arguments[argumentName].str();
+		return val;
+	}
+
 	template<typename T>
 	T get(const std::string& argumentName, T defaultValue)
 	{

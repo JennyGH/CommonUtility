@@ -34,10 +34,17 @@ struct _ArgumentGetter
 	static ValueType ValueOf(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments)
 	{
 		_IsArgumentExist(argumentName, applicationName, arguments);
-		return ValueType();
+		ValueType val = ValueType();
+		arguments[argumentName] >> val;
+		return val;
 	}
 	static ValueType ValueOf(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments, ValueType defaultValue)
 	{
+		ValueType val = defaultValue;
+		if (arguments.find(argumentName) != arguments.end())
+		{
+			arguments[argumentName] >> val;
+		}
 		return defaultValue;
 	}
 };
@@ -48,21 +55,19 @@ struct _ArgumentGetter<bool>
 	static bool ValueOf(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments)
 	{
 		bool val = false;
-		if (arguments.find(argumentName) == arguments.end())
+		if (arguments.find(argumentName) != arguments.end())
 		{
-			return val;
+			arguments[argumentName] >> val;
 		}
-		arguments[argumentName] >> val;
 		return val;
 	}
 	static bool ValueOf(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments, bool defaultValue)
 	{
 		bool val = defaultValue;
-		if (arguments.find(argumentName) == arguments.end())
+		if (arguments.find(argumentName) != arguments.end())
 		{
-			return val;
+			arguments[argumentName] >> val;
 		}
-		arguments[argumentName] >> val;
 		return val;
 	}
 };
@@ -80,11 +85,10 @@ struct _ArgumentGetter<int>
 	static int ValueOf(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments, int defaultValue)
 	{
 		int val = defaultValue;
-		if (arguments.find(argumentName) == arguments.end())
+		if (arguments.find(argumentName) != arguments.end())
 		{
-			return val;
+			arguments[argumentName] >> val;
 		}
-		arguments[argumentName] >> val;
 		return val;
 	}
 };
@@ -102,11 +106,10 @@ struct _ArgumentGetter<double>
 	static double ValueOf(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments, double defaultValue)
 	{
 		double val = defaultValue;
-		if (arguments.find(argumentName) == arguments.end())
+		if (arguments.find(argumentName) != arguments.end())
 		{
-			return val;
+			arguments[argumentName] >> val;
 		}
-		arguments[argumentName] >> val;
 		return val;
 	}
 };

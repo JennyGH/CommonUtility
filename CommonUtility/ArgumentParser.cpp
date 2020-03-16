@@ -1,14 +1,6 @@
 #include "pch.h"
 #include "ArgumentParser.h"
 
-void ArgumentParser::_checkArgument(const std::string & argumentName)
-{
-	if (m_arguments.find(argumentName) == m_arguments.end())
-	{
-		throw ArgumentNotFoundException(m_application, argumentName);
-	}
-}
-
 ArgumentParser::ArgumentParser(int argc, char ** argv) : m_application(argv[0])
 {
 	if (argc <= 1)

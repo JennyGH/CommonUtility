@@ -12,12 +12,12 @@
 #include "LogStream.h"
 #include "ArgumentParser.h"
 
-#define TEST_ANY 0
+#define TEST_ANY 1
 #define TEST_GUID 0
 #define TEST_CONVERT 0
 #define TEST_ENCODING 0
 #define TEST_REGISTRY 0
-#define TEST_INTEGER 1
+#define TEST_INTEGER 0
 #define TEST_DATETIME 0
 #define TEST_LOGSTREAM 0
 

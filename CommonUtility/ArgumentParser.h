@@ -6,8 +6,8 @@
 #include <iomanip>
 #include <iostream>
 
-typedef std::ios_base&(io_opt_t)(std::ios_base&);
-
+typedef std::ios_base& (io_opt_t)(std::ios_base&);
+typedef std::map<std::string, std::stringstream> ArgumentMap;
 
 class ArgumentNotFoundException : public std::exception
 {
@@ -19,77 +19,141 @@ private:
 	std::string	m_moduleName;
 };
 
+
+static bool _IsArgumentExist(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments)
+{
+	if (arguments.find(argumentName) == arguments.end())
+	{
+		throw ArgumentNotFoundException(applicationName, argumentName);
+	}
+}
+
+template<typename ValueType>
+struct _ArgumentGetter
+{
+	static ValueType ValueOf(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments)
+	{
+		_IsArgumentExist(argumentName, applicationName, arguments);
+		return ValueType();
+	}
+	static ValueType ValueOf(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments, ValueType defaultValue)
+	{
+		return defaultValue;
+	}
+};
+
+template<>
+struct _ArgumentGetter<bool>
+{
+	static bool ValueOf(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments)
+	{
+		bool val = false;
+		if (arguments.find(argumentName) == arguments.end())
+		{
+			return val;
+		}
+		arguments[argumentName] >> val;
+		return val;
+	}
+	static bool ValueOf(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments, bool defaultValue)
+	{
+		bool val = defaultValue;
+		if (arguments.find(argumentName) == arguments.end())
+		{
+			return val;
+		}
+		arguments[argumentName] >> val;
+		return val;
+	}
+};
+
+template<>
+struct _ArgumentGetter<int>
+{
+	static int ValueOf(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments)
+	{
+		_IsArgumentExist(argumentName, applicationName, arguments);
+		int val = 0;
+		arguments[argumentName] >> val;
+		return val;
+	}
+	static int ValueOf(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments, int defaultValue)
+	{
+		int val = defaultValue;
+		if (arguments.find(argumentName) == arguments.end())
+		{
+			return val;
+		}
+		arguments[argumentName] >> val;
+		return val;
+	}
+};
+
+template<>
+struct _ArgumentGetter<double>
+{
+	static double ValueOf(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments)
+	{
+		_IsArgumentExist(argumentName, applicationName, arguments);
+		double val = 0.00;
+		arguments[argumentName] >> val;
+		return val;
+	}
+	static double ValueOf(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments, double defaultValue)
+	{
+		double val = defaultValue;
+		if (arguments.find(argumentName) == arguments.end())
+		{
+			return val;
+		}
+		arguments[argumentName] >> val;
+		return val;
+	}
+};
+
+template<>
+struct _ArgumentGetter<std::string>
+{
+	static std::string ValueOf(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments)
+	{
+		_IsArgumentExist(argumentName, applicationName, arguments);
+		return arguments[argumentName].str();
+	}
+	static std::string ValueOf(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments, std::string defaultValue)
+	{
+		std::string val = defaultValue;
+		if (arguments.find(argumentName) == arguments.end())
+		{
+			return val;
+		}
+		return arguments[argumentName].str();
+	}
+};
+
 class ArgumentParser
 {
-	void _checkArgument(const std::string& argumentName);
 public:
 	ArgumentParser(int argc, char** argv);
 
 	~ArgumentParser();
 
-
 	template<typename T>
 	T get(const std::string& argumentName)
 	{
-		_checkArgument(argumentName);
-		T val = T();
-		m_arguments[argumentName] >> val;
-		return val;
-	}
-
-	template<>
-	std::string get(const std::string& argumentName)
-	{
-		_checkArgument(argumentName);
-		std::string val;
-		val = m_arguments[argumentName].str();
-		return val;
+		return _ArgumentGetter<T>::ValueOf(argumentName, m_application, m_arguments);
 	}
 
 	template<typename T>
 	T get(const std::string& argumentName, T defaultValue)
 	{
-		T val = defaultValue;
-		m_arguments[argumentName] >> val;
-		return val;
-	}
-
-	template<typename T>
-	T get(const std::string& argumentName, io_opt_t opt)
-	{
-		_checkArgument(argumentName);
-		T val = T();
-		if (nullptr != opt)
-		{
-			m_arguments[argumentName] >> opt >> val;
-		}
-		else
-		{
-			m_arguments[argumentName] >> val;
-		}
-		return val;
-	}
-
-	template<typename T>
-	T get(const std::string& argumentName, io_opt_t opt, T defaultValue)
-	{
-		T val = defaultValue;
-		if (nullptr != opt)
-		{
-			m_arguments[argumentName] >> opt >> val;
-		}
-		else
-		{
-			m_arguments[argumentName] >> val;
-		}
-		return val;
+		return _ArgumentGetter<T>::ValueOf(argumentName, m_application, m_arguments, defaultValue);
 	}
 
 	std::string getApplicationName() const;
 
 private:
 	std::string m_application;
-	std::map<std::string, std::stringstream> m_arguments;
+	ArgumentMap m_arguments;
 };
 
 class Manual

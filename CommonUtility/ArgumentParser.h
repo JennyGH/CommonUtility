@@ -45,7 +45,7 @@ struct _ArgumentGetter
 		{
 			arguments[argumentName] >> val;
 		}
-		return defaultValue;
+		return val;
 	}
 };
 

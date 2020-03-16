@@ -73,48 +73,6 @@ struct _ArgumentGetter<bool>
 };
 
 template<>
-struct _ArgumentGetter<int>
-{
-	static int ValueOf(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments)
-	{
-		_IsArgumentExist(argumentName, applicationName, arguments);
-		int val = 0;
-		arguments[argumentName] >> val;
-		return val;
-	}
-	static int ValueOf(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments, int defaultValue)
-	{
-		int val = defaultValue;
-		if (arguments.find(argumentName) != arguments.end())
-		{
-			arguments[argumentName] >> val;
-		}
-		return val;
-	}
-};
-
-template<>
-struct _ArgumentGetter<double>
-{
-	static double ValueOf(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments)
-	{
-		_IsArgumentExist(argumentName, applicationName, arguments);
-		double val = 0.00;
-		arguments[argumentName] >> val;
-		return val;
-	}
-	static double ValueOf(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments, double defaultValue)
-	{
-		double val = defaultValue;
-		if (arguments.find(argumentName) != arguments.end())
-		{
-			arguments[argumentName] >> val;
-		}
-		return val;
-	}
-};
-
-template<>
 struct _ArgumentGetter<std::string>
 {
 	static std::string ValueOf(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments)

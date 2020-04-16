@@ -1,0 +1,30 @@
+PROJECT(CommonUtility)
+
+FILE(GLOB_RECURSE all_files
+        ${CMAKE_CURRENT_SOURCE_DIR}/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/*.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+
+FILE(GLOB_RECURSE include_files
+        ${CMAKE_CURRENT_SOURCE_DIR}/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp)
+
+FILE(GLOB_RECURSE src_files 
+        ${CMAKE_CURRENT_SOURCE_DIR}/*.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+
+SOURCE_GROUP("Header Files" FILES "${include_files}")
+SOURCE_GROUP("Source Files" FILES "${src_files}")
+
+IF(DEFINED ENV{JAVA_HOME})
+	MESSAGE(STATUS "JAVA_HOME: $ENV{JAVA_HOME}")
+	INCLUDE_DIRECTORIES("$ENV{JAVA_HOME}/include")
+	IF(MSVC)
+		INCLUDE_DIRECTORIES("$ENV{JAVA_HOME}/include/win32")
+	ELSE(MSVC)
+		INCLUDE_DIRECTORIES("$ENV{JAVA_HOME}/include/linux")
+	ENDIF(MSVC)
+ENDIF()
+
+ADD_EXECUTABLE(JavaMethod ${all_files})

@@ -15,8 +15,8 @@ MemoryLeakDetector::MemoryBlock * MemoryLeakDetector::FindBlock(void * address)
 }
 
 MemoryLeakDetector::MemoryLeakDetector()
-	: m_bShouldDetect(false)
-	, m_nLeakMemorySize(0)
+	: m_nLeakMemorySize(0)
+	, m_nLeakBlockCount(0)
 	, m_pHead(nullptr)
 	, m_pTail(nullptr)
 {
@@ -24,6 +24,32 @@ MemoryLeakDetector::MemoryLeakDetector()
 
 MemoryLeakDetector::~MemoryLeakDetector()
 {
+	if (this->m_nLeakMemorySize > 0)
+	{
+		printf(
+			"Memory leak!!! \r\n"
+			"\t Total leak size: %lld bytes, count of leak block: %lld.\r\n",
+			(std::size_t)this->m_nLeakMemorySize,
+			(std::size_t)this->m_nLeakBlockCount);
+	}
+	else
+	{
+		printf("No memory leak.\r\n");
+	}
+	// 释放所有节点内存
+	// 找到头节点
+	MemoryLeakDetector::MemoryBlock* ptr = this->m_pHead;
+	while (nullptr != ptr)
+	{
+		// 保存下一个节点指针
+		MemoryLeakDetector::MemoryBlock* pNext = ptr->next;
+		//打印代码文件路径与行号
+		printf("\t Block size: %d bytes, file: %s, line: %d\r\n", ptr->size, ptr->filename, ptr->line);
+		// 删除当前元素
+		::free(ptr);
+		// 移动游标指针
+		ptr = pNext;
+	}
 }
 
 MemoryLeakDetector & MemoryLeakDetector::Get()
@@ -32,24 +58,9 @@ MemoryLeakDetector & MemoryLeakDetector::Get()
 	return g_memoryLeakDetector;
 }
 
-void MemoryLeakDetector::Start()
-{
-	this->m_mutex.lock();
-	this->m_bShouldDetect = true;
-	this->m_mutex.unlock();
-}
-
-void MemoryLeakDetector::Stop()
-{
-	this->m_mutex.lock();
-	this->m_bShouldDetect = false;
-	this->m_mutex.unlock();
-}
-
 void MemoryLeakDetector::InsertBlock(void * address, std::size_t size, const char* file, int line)
 {
 	this->m_mutex.lock();
-	if (this->m_bShouldDetect)
 	{
 		MemoryLeakDetector::MemoryBlock* pBlock = (MemoryLeakDetector::MemoryBlock*)::malloc(sizeof(MemoryLeakDetector::MemoryBlock));
 		memset(pBlock, 0, sizeof(MemoryLeakDetector::MemoryBlock));
@@ -64,6 +75,7 @@ void MemoryLeakDetector::InsertBlock(void * address, std::size_t size, const cha
 			pBlock->filename[len] = 0;
 		}
 		m_nLeakMemorySize += size;
+		m_nLeakBlockCount++;
 		if (nullptr == this->m_pHead || nullptr == this->m_pTail)
 		{
 			//首次运行
@@ -84,7 +96,6 @@ void MemoryLeakDetector::InsertBlock(void * address, std::size_t size, const cha
 void MemoryLeakDetector::RemoveBlock(void * address)
 {
 	this->m_mutex.lock();
-	if (this->m_bShouldDetect)
 	{
 		MemoryLeakDetector::MemoryBlock* pBlock = this->FindBlock(address);
 		if (nullptr != pBlock)
@@ -104,11 +115,11 @@ void MemoryLeakDetector::RemoveBlock(void * address)
 
 			if (this->m_pHead == pBlock)
 			{
-				this->m_pHead = nullptr;
+				this->m_pHead = pNext;
 			}
 			if (this->m_pTail == pBlock)
 			{
-				this->m_pTail = nullptr;
+				this->m_pTail = pPrev;
 			}
 			if (nullptr != pBlock->filename)
 			{
@@ -117,6 +128,7 @@ void MemoryLeakDetector::RemoveBlock(void * address)
 			}
 			::free(pBlock);
 			m_nLeakMemorySize -= size;
+			m_nLeakBlockCount--;
 		}
 	}
 	this->m_mutex.unlock();
@@ -129,7 +141,7 @@ std::size_t MemoryLeakDetector::GetLeakMemotySize() const
 
 #undef new
 
-void* operator new(std::size_t size, void* address, const char* file, int line)
+void * operator new(std::size_t size, const char * file, int line)
 {
 	void* ptr = ::malloc(size);
 	if (nullptr == ptr)
@@ -137,14 +149,32 @@ void* operator new(std::size_t size, void* address, const char* file, int line)
 		printf("Out of memory\n");
 		return ptr;
 	}
-	//printf("malloc %ld bytes, address: 0x%x\n", size, ptr);
-	MemoryLeakDetector::Get().InsertBlock(ptr, size);
+	//printf("malloc %ld bytes, malloc return: 0x%x\n", size, ptr);
+	MemoryLeakDetector::Get().InsertBlock(ptr, size, file, line);
 	return ptr;
 }
 
-void* operator new[](std::size_t size, void* ptr, const char* file, int line)
+void * operator new[](std::size_t size, const char * file, int line)
 {
-	return operator new(size, ptr, file, line);
+	return operator new(size, file, line);
+}
+
+void* operator new(std::size_t size, void* where, const char* file, int line)
+{
+	void* ptr = ::malloc(size);
+	if (nullptr == ptr)
+	{
+		printf("Out of memory\n");
+		return ptr;
+	}
+	//printf("malloc %ld bytes, given address: 0x%x, malloc return: 0x%x\n", size, where, ptr);
+	MemoryLeakDetector::Get().InsertBlock(ptr, size, file, line);
+	return ptr;
+}
+
+void* operator new[](std::size_t size, void* where, const char* file, int line)
+{
+	return operator new(size, where, file, line);
 }
 
 void operator delete(void* ptr)

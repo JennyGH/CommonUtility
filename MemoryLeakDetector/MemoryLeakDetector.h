@@ -23,9 +23,6 @@ public:
 
 	static MemoryLeakDetector& Get();
 
-	void Start();
-	void Stop();
-
 	void InsertBlock(void* address, std::size_t size, const char* file = nullptr, int line = 0);
 
 	void RemoveBlock(void* address);
@@ -33,16 +30,26 @@ public:
 	std::size_t GetLeakMemotySize() const;
 
 private:
-	std::mutex		m_mutex;
-	bool			m_bShouldDetect;
-	std::size_t		m_nLeakMemorySize;
-	MemoryBlock*	m_pHead;
-	MemoryBlock*	m_pTail;
+	std::mutex					m_mutex;
+	std::atomic<std::size_t>	m_nLeakMemorySize;
+	std::atomic<std::size_t>	m_nLeakBlockCount;
+	MemoryBlock*				m_pHead;
+	MemoryBlock*				m_pTail;
 };
 
-void* operator new(std::size_t size, void* ptr, const char* file, int line);
-void* operator new[](std::size_t size, void* ptr, const char* file, int line);
-void operator delete(void* ptr);
-void operator delete[](void * ptr);
+void* operator new  (std::size_t size, const char* file, int line);
+void* operator new[](std::size_t size, const char* file, int line);
+void* operator new  (std::size_t size, void* where, const char* file, int line);
+void* operator new[](std::size_t size, void* where, const char* file, int line);
+void operator delete  (void* ptr);
+void operator delete[](void* ptr);
 
-#define new(ptr) new(ptr, __FILE__, __LINE__)
+#ifdef DEBUG_NEW
+#undef DEBUG_NEW
+#endif // DEBUG_NEW
+
+//#define DEBUG_NEW(_where) new(_where, __FILE__, __LINE__)
+//#define new(_where) DEBUG_NEW(_where)
+
+#define DEBUG_NEW new(__FILE__, __LINE__)
+#define new DEBUG_NEW

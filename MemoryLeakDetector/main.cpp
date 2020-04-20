@@ -26,6 +26,7 @@ private:
 int main(int argc, char *argv[])
 {
 	MemoryLeakDetector& memoryLeakDetector = MemoryLeakDetector::Get();
+
 	size_t size = 100;
 
 	TestClass** ptrs = new TestClass*[size]();
@@ -41,13 +42,13 @@ int main(int argc, char *argv[])
 		ptrs[i] = nullptr;
 	}
 
-	//delete[] ptrs;
-	//ptrs = nullptr;
+	//#pragma push_macro("new")
+	//#undef new
+		//TestClass* ptr = new(ptrs) TestClass();
+	//#pragma pop_macro("new")
 
-	std::size_t leak = memoryLeakDetector.GetLeakMemotySize();
-	if (leak > 0)
-	{
-		printf("检测到内存泄露: %ld bytes\n", leak);
-	}
+	delete[] ptrs;
+	ptrs = nullptr;
+
 	return 0;
 }

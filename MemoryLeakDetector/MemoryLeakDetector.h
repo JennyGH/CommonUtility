@@ -1,6 +1,5 @@
 #pragma once
 #include <mutex>
-#include <atomic>
 #include <string>
 
 class MemoryLeakDetector
@@ -9,6 +8,7 @@ class MemoryLeakDetector
 	{
 		void* address;
 		std::size_t size;
+		std::size_t tid;
 		char* filename;
 		int line;
 		MemoryBlock* prev;
@@ -21,7 +21,7 @@ class MemoryLeakDetector
 public:
 	~MemoryLeakDetector();
 
-	static MemoryLeakDetector& Get();
+	static MemoryLeakDetector& GetGlobalDetector();
 
 	void InsertBlock(void* address, std::size_t size, const char* file = nullptr, int line = 0);
 
@@ -30,11 +30,12 @@ public:
 	std::size_t GetLeakMemotySize() const;
 
 private:
-	std::mutex					m_mutex;
-	std::atomic<std::size_t>	m_nLeakMemorySize;
-	std::atomic<std::size_t>	m_nLeakBlockCount;
-	MemoryBlock*				m_pHead;
-	MemoryBlock*				m_pTail;
+	std::mutex		m_mutex;
+	std::size_t		m_nProcessId;
+	std::size_t		m_nLeakMemorySize;
+	std::size_t		m_nLeakBlockCount;
+	MemoryBlock*	m_pHead;
+	MemoryBlock*	m_pTail;
 };
 
 void* operator new  (std::size_t size, const char* file, int line);

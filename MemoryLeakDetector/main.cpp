@@ -25,7 +25,7 @@ private:
 
 int main(int argc, char *argv[])
 {
-	MemoryLeakDetector& memoryLeakDetector = MemoryLeakDetector::Get();
+	MemoryLeakDetector& memoryLeakDetector = MemoryLeakDetector::GetGlobalDetector();
 
 	size_t size = 100;
 
@@ -36,18 +36,18 @@ int main(int argc, char *argv[])
 		ptrs[i] = (new TestClass());
 	}
 
-	for (size_t i = 0; i < size; i++)
-	{
-		delete ptrs[i];
-		ptrs[i] = nullptr;
-	}
+	//for (size_t i = 0; i < size; i++)
+	//{
+	//	delete ptrs[i];
+	//	ptrs[i] = nullptr;
+	//}
 
 	//#pragma push_macro("new")
 	//#undef new
 		//TestClass* ptr = new(ptrs) TestClass();
 	//#pragma pop_macro("new")
 
-	delete[] ptrs;
+	//delete[] ptrs;
 	ptrs = nullptr;
 
 	return 0;

@@ -1,4 +1,12 @@
 #include "MemoryLeakDetector.h"
+#if defined(WIN32) || defined(_WIN32)
+#include <Windows.h>
+#else
+#include <unistd.h>
+#include <pthread.h>
+#define GetCurrentProcessId getpid
+#define GetCurrentThreadId	pthread_self
+#endif
 
 MemoryLeakDetector::MemoryBlock * MemoryLeakDetector::FindBlock(void * address)
 {
@@ -15,7 +23,8 @@ MemoryLeakDetector::MemoryBlock * MemoryLeakDetector::FindBlock(void * address)
 }
 
 MemoryLeakDetector::MemoryLeakDetector()
-	: m_nLeakMemorySize(0)
+	: m_nProcessId(::GetCurrentProcessId())
+	, m_nLeakMemorySize(0)
 	, m_nLeakBlockCount(0)
 	, m_pHead(nullptr)
 	, m_pTail(nullptr)
@@ -27,14 +36,16 @@ MemoryLeakDetector::~MemoryLeakDetector()
 	if (this->m_nLeakMemorySize > 0)
 	{
 		printf(
-			"Memory leak!!! \r\n"
+			"Memory leak in process[%lld] !!! \r\n"
 			"\t Total leak size: %lld bytes, count of leak block: %lld.\r\n",
+			(std::size_t)this->m_nProcessId,
 			(std::size_t)this->m_nLeakMemorySize,
 			(std::size_t)this->m_nLeakBlockCount);
 	}
 	else
 	{
-		printf("No memory leak.\r\n");
+		printf("No memory leak in process[%lld].\r\n",
+			(std::size_t)this->m_nProcessId);
 	}
 	// 释放所有节点内存
 	// 找到头节点
@@ -43,8 +54,8 @@ MemoryLeakDetector::~MemoryLeakDetector()
 	{
 		// 保存下一个节点指针
 		MemoryLeakDetector::MemoryBlock* pNext = ptr->next;
-		//打印代码文件路径与行号
-		printf("\t Block size: %d bytes, file: %s, line: %d\r\n", ptr->size, ptr->filename, ptr->line);
+		// 打印内存块大小、线程号、代码文件路径、行号
+		printf("\t Block size: %d bytes, tid: %lld, file: %s, line: %d\r\n", ptr->size, ptr->tid, ptr->filename, ptr->line);
 		// 删除当前元素
 		::free(ptr);
 		// 移动游标指针
@@ -52,7 +63,7 @@ MemoryLeakDetector::~MemoryLeakDetector()
 	}
 }
 
-MemoryLeakDetector & MemoryLeakDetector::Get()
+MemoryLeakDetector & MemoryLeakDetector::GetGlobalDetector()
 {
 	static MemoryLeakDetector g_memoryLeakDetector;
 	return g_memoryLeakDetector;
@@ -67,6 +78,7 @@ void MemoryLeakDetector::InsertBlock(void * address, std::size_t size, const cha
 		pBlock->address = address;
 		pBlock->size = size;
 		pBlock->line = line;
+		pBlock->tid = ::GetCurrentThreadId();
 		if (nullptr != file)
 		{
 			int len = strlen(file);
@@ -149,8 +161,7 @@ void * operator new(std::size_t size, const char * file, int line)
 		printf("Out of memory\n");
 		return ptr;
 	}
-	//printf("malloc %ld bytes, malloc return: 0x%x\n", size, ptr);
-	MemoryLeakDetector::Get().InsertBlock(ptr, size, file, line);
+	MemoryLeakDetector::GetGlobalDetector().InsertBlock(ptr, size, file, line);
 	return ptr;
 }
 
@@ -167,8 +178,7 @@ void* operator new(std::size_t size, void* where, const char* file, int line)
 		printf("Out of memory\n");
 		return ptr;
 	}
-	//printf("malloc %ld bytes, given address: 0x%x, malloc return: 0x%x\n", size, where, ptr);
-	MemoryLeakDetector::Get().InsertBlock(ptr, size, file, line);
+	MemoryLeakDetector::GetGlobalDetector().InsertBlock(ptr, size, file, line);
 	return ptr;
 }
 
@@ -179,8 +189,7 @@ void* operator new[](std::size_t size, void* where, const char* file, int line)
 
 void operator delete(void* ptr)
 {
-	//printf("free 0x%x\n", ptr);
-	MemoryLeakDetector::Get().RemoveBlock(ptr);
+	MemoryLeakDetector::GetGlobalDetector().RemoveBlock(ptr);
 	::free(ptr);
 }
 

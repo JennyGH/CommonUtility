@@ -17,7 +17,7 @@ class MemoryLeakDetector
 
 	MemoryBlock* FindBlock(void* address);
 
-	MemoryLeakDetector();
+	MemoryLeakDetector(std::size_t id = 0);
 public:
 	~MemoryLeakDetector();
 
@@ -26,6 +26,8 @@ public:
 	void InsertBlock(void* address, std::size_t size, const char* file = nullptr, int line = 0);
 
 	void RemoveBlock(void* address);
+
+	std::size_t GetCurrentThreadMemoryLeak();
 
 	std::size_t GetLeakMemotySize() const;
 
@@ -38,12 +40,12 @@ private:
 	MemoryBlock*	m_pTail;
 };
 
-void* operator new  (std::size_t size, const char* file, int line);
-void* operator new[](std::size_t size, const char* file, int line);
-void* operator new  (std::size_t size, void* where, const char* file, int line);
-void* operator new[](std::size_t size, void* where, const char* file, int line);
-void operator delete  (void* ptr);
-void operator delete[](void* ptr);
+void* operator new  (std::size_t size, const char* file, int line) noexcept;
+void* operator new[](std::size_t size, const char* file, int line) noexcept;
+void* operator new  (std::size_t size, void* where, const char* file, int line) noexcept;
+void* operator new[](std::size_t size, void* where, const char* file, int line) noexcept;
+void operator delete  (void* ptr) noexcept;
+void operator delete[](void* ptr) noexcept;
 
 #ifdef DEBUG_NEW
 #undef DEBUG_NEW

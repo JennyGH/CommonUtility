@@ -1,5 +1,6 @@
 ﻿#include <string>
 #include <vector>
+#include <thread>
 #include "MemoryLeakDetector.h"
 
 class TestClass
@@ -25,9 +26,38 @@ private:
 
 int main(int argc, char *argv[])
 {
-	MemoryLeakDetector& memoryLeakDetector = MemoryLeakDetector::GetGlobalDetector();
+	size_t size = 3;
 
-	size_t size = 100;
+	auto thread_function = [size]()
+	{
+		TestClass** ptrs = new TestClass*[size]();
+
+		for (size_t i = 0; i < size; i++)
+		{
+			ptrs[i] = (new TestClass());
+		}
+
+		for (size_t i = 0; i < size; i++)
+		{
+			//delete ptrs[i];
+			ptrs[i] = nullptr;
+		}
+
+		delete[] ptrs;
+		ptrs = nullptr;
+	};
+
+
+	std::vector<std::thread> threads;
+
+	threads.emplace_back(thread_function);
+	threads.emplace_back(thread_function);
+	threads.emplace_back(thread_function);
+
+	for (auto& thread : threads)
+	{
+		thread.detach();
+	}
 
 	TestClass** ptrs = new TestClass*[size]();
 
@@ -36,19 +66,16 @@ int main(int argc, char *argv[])
 		ptrs[i] = (new TestClass());
 	}
 
-	//for (size_t i = 0; i < size; i++)
-	//{
-	//	delete ptrs[i];
-	//	ptrs[i] = nullptr;
-	//}
+	for (size_t i = 0; i < size; i++)
+	{
+		delete ptrs[i];
+		ptrs[i] = nullptr;
+	}
 
-	//#pragma push_macro("new")
-	//#undef new
-		//TestClass* ptr = new(ptrs) TestClass();
-	//#pragma pop_macro("new")
-
-	//delete[] ptrs;
+	delete[] ptrs;
 	ptrs = nullptr;
+
+	std::this_thread::sleep_for(std::chrono::seconds(5));
 
 	return 0;
 }

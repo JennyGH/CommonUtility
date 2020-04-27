@@ -6,6 +6,8 @@
 
 #define DEFAULT_BUFFER_SIZE 1024
 
+using Overlapped = OverlappedWrapper<1024>;
+
 static UINT32								GetCountOfProcessors();
 
 unsigned WINAPI IOCompletionPort::_WorkerThread(void * hHandle)
@@ -20,7 +22,7 @@ unsigned WINAPI IOCompletionPort::_WorkerThread(void * hHandle)
 	while (true)
 	{
 		DWORD nBytesOfTransferred = 0;
-		OVERLAPPED* lpOverlapped = NULL;
+		Overlapped* lpOverlapped = NULL;
 		BOOL bSuccess = ::GetQueuedCompletionStatus(
 			pThis->m_hCompletionPort,
 			&nBytesOfTransferred,
@@ -28,6 +30,37 @@ unsigned WINAPI IOCompletionPort::_WorkerThread(void * hHandle)
 			//(PULONG_PTR)&lpCompletionKey,
 			(LPOVERLAPPED*)&lpOverlapped,
 			WSA_INFINITE);
+
+		if (-1 == nBytesOfTransferred)
+		{
+			//Exit
+			break;
+		}
+
+		if (NULL == lpOverlapped)
+		{
+			continue;
+		}
+
+		//Free OverlappedWrapper pointer while going out of this scope.
+		common::raii::scope_function<void, Overlapped**>
+			scope_release_overlapped(
+				common::raii::release_object,
+				&lpOverlapped);
+
+		Overlapped::OverlappedOperation operation = lpOverlapped->GetOperation();
+		switch (operation)
+		{
+		case Overlapped::None:
+			break;
+		case Overlapped::Read:
+			break;
+		case Overlapped::Write:
+			break;
+		default:
+			break;
+		}
+
 	}
 
 	return 0;

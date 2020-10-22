@@ -54,10 +54,11 @@ struct _ArgumentGetter<bool>
 {
 	static bool ValueOf(const std::string& argumentName, const std::string& applicationName, ArgumentMap& arguments)
 	{
+		_IsArgumentExist(argumentName, applicationName, arguments);
 		bool val = false;
 		if (arguments.find(argumentName) != arguments.end())
 		{
-			arguments[argumentName] >> val;
+			val = arguments[argumentName].str() == "true";
 		}
 		return val;
 	}
@@ -66,7 +67,7 @@ struct _ArgumentGetter<bool>
 		bool val = defaultValue;
 		if (arguments.find(argumentName) != arguments.end())
 		{
-			arguments[argumentName] >> val;
+			val = arguments[argumentName].str() == "true";
 		}
 		return val;
 	}

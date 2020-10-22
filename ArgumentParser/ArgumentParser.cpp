@@ -13,7 +13,7 @@ ArgumentParser::ArgumentParser(int argc, char ** argv) : m_application(argv[0])
 		std::size_t pos = str.find_first_of('=');
 		if (std::string::npos == pos)
 		{
-			m_arguments[str.substr(1)] << true;
+			m_arguments[str.substr(1)] << "true";
 		}
 		else
 		{

@@ -3,7 +3,8 @@
  * 对重叠IO结构的包装
  */
 template<int _BufferSize>
-class OverlappedWrapper
+class OverlappedWrapper :
+	private OVERLAPPED
 {
 	OverlappedWrapper(const OverlappedWrapper&);
 	OverlappedWrapper& operator= (const OverlappedWrapper);
@@ -23,7 +24,6 @@ public:
 	OverlappedOperation GetOperation() const;
 
 public:
-	OVERLAPPED overlapped;
 	WSABUF wsaBuffer;
 
 private:
@@ -35,7 +35,10 @@ template<int _BufferSize>
 inline OverlappedWrapper<_BufferSize>::OverlappedWrapper(OverlappedOperation operation)
 	:operation(OverlappedOperation::None)
 {
-	memset(&overlapped, 0, sizeof(overlapped));
+	memset(this->m_buffer, 0, _BufferSize);
+	this->hEvent = NULL;
+	this->Internal = 0;
+	this->InternalHigh = 0;
 	wsaBuffer.buf = m_buffer;
 	wsaBuffer.len = (_BufferSize <= 0 ? 0 : _BufferSize);
 }

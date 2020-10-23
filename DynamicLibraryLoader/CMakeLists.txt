@@ -1,4 +1,4 @@
-PROJECT(CommonUtility)
+PROJECT(DynamicLibraryLoader)
 
 FILE(GLOB_RECURSE all_files
         ${CMAKE_CURRENT_SOURCE_DIR}/*.h
@@ -17,14 +17,4 @@ FILE(GLOB_RECURSE src_files
 SOURCE_GROUP("Header Files" FILES "${include_files}")
 SOURCE_GROUP("Source Files" FILES "${src_files}")
 
-IF(DEFINED ENV{JAVA_HOME})
-	MESSAGE(STATUS "JAVA_HOME: $ENV{JAVA_HOME}")
-	INCLUDE_DIRECTORIES("$ENV{JAVA_HOME}/include")
-	IF(MSVC)
-		INCLUDE_DIRECTORIES("$ENV{JAVA_HOME}/include/win32")
-	ELSE(MSVC)
-		INCLUDE_DIRECTORIES("$ENV{JAVA_HOME}/include/linux")
-	ENDIF(MSVC)
-ENDIF()
-
-ADD_EXECUTABLE(JavaMethod ${all_files})
+ADD_EXECUTABLE(DynamicLibraryLoader ${all_files})

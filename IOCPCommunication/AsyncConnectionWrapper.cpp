@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "AsyncBuffer.h"
+#include "OverlappedWrapper.h"
 #include "AsyncConnectionWrapper.h"
 
 #define lock \
@@ -70,7 +70,7 @@ void AsyncConnectionWrapper::Close(LPFN_DISCONNECTEX lpfnDisconnectEx)
 {
 	if (lpfnDisconnectEx != NULL)
 	{
-		AsyncBuffer& buffer = AsyncBuffer::NewBuffer(AsyncConnectionWrapperPtr(this), AsyncOperation::Disconnect, 0);
+		OverlappedWrapper& buffer = OverlappedWrapper::NewBuffer(AsyncConnectionWrapperPtr(this), AsyncOperation::Disconnect, 0);
 		if (!lpfnDisconnectEx(m_socket, &(buffer.overlapped), TF_DISCONNECT | TF_REUSE_SOCKET, 0))
 		{
 		}

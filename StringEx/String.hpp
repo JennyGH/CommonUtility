@@ -108,6 +108,11 @@ namespace common
 					}
 				}
 
+				if (this->find_last_of(separator) == this->length() - separator.length())
+				{
+					output.push_back("");
+				}
+
 				return output;
 			}
 

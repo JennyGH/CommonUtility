@@ -182,7 +182,7 @@ static returnType Invoke(JNIEnv* env, jobject object, const std::string& classNa
 		}\
 		throw std::runtime_error(("Can not find static method \"" + methodName + "\" in class: \"" + className + "\", sig: " + sig).c_str());\
 	}\
-	return env->functionName(clazz, methodId, args...);\
+	return (returnType)env->functionName(clazz, methodId, args...);\
 }\
 
 	template<typename _Return, typename ...Args>
@@ -266,7 +266,7 @@ static returnType Invoke(JNIEnv* env, jobject object, const std::string& classNa
 		}\
 		throw std::runtime_error(("Can not find member method \"" + methodName + "\" in class \"" + className + "\", sig: " + sig).c_str());\
 	}\
-	return env->functionName(clazz, methodId, args...);\
+	return (returnType)env->functionName(object, methodId, args...);\
 }\
 
 	template<typename _Return, typename ...Args>
@@ -291,6 +291,7 @@ struct MemberMethodInvoker<returnType, Args...>\
 	DECLARE_INVOKER(jdouble, CallDoubleMethod);
 	DECLARE_INVOKER(jobject, CallObjectMethod);
 	DECLARE_INVOKER(jboolean, CallBooleanMethod);
+	DECLARE_INVOKER(jbyteArray, CallObjectMethod);
 
 #undef DECLARE_INVOKER
 

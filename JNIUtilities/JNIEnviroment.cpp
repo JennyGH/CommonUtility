@@ -82,21 +82,24 @@ Java::JNIEnviroment Java::JNIEnviroment::GetEnviromentFromJAR(
 	}
 	OptionString classPathsOptionString(classPaths);
 
-	std::string libraryPaths = "-Djava.library.path=";
+	std::string libraryPaths = "";
+	if (!libPaths.empty())
+	{
+		libraryPaths = "-Djava.library.path=";
+	}
 	for (const auto& libPath : libPaths)
 	{
 		libraryPaths.append(libPath).append(";");
-	}
-	if (libPaths.empty())
-	{
-		libraryPaths.append("NONE");
 	}
 	OptionString libraryPathsOptionString(libraryPaths);
 
 	options.push_back(JavaVMOption{ "-Djava.compiler=NONE" });	 // disable JIT
 	options.push_back(JavaVMOption{ classPathsOptionString });   // set class path
 	options.push_back(JavaVMOption{ "-verbose:NONE" });
-	options.push_back(JavaVMOption{ libraryPathsOptionString }); // set native library path
+	if (!libraryPaths.empty())
+	{
+		options.push_back(JavaVMOption{ libraryPathsOptionString }); // set native library path
+	}
 
 	vm_args.version = jvmVersion;
 	vm_args.nOptions = options.size();

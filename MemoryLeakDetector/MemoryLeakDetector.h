@@ -6,13 +6,13 @@ class MemoryLeakDetector
 {
 	struct MemoryBlock
 	{
-		void* address;
-		std::size_t size;
-		std::size_t tid;
-		char* filename;
-		int line;
-		MemoryBlock* prev;
-		MemoryBlock* next;
+		void*         address;
+		std::size_t   size;
+		std::size_t   tid;
+		char*         filename;
+		int           line;
+		MemoryBlock*  prev;
+		MemoryBlock*  next;
 	};
 
 	MemoryBlock* FindBlock(void* address);
@@ -44,8 +44,8 @@ void* operator new  (std::size_t size, const char* file, int line) noexcept;
 void* operator new[](std::size_t size, const char* file, int line) noexcept;
 void* operator new  (std::size_t size, void* where, const char* file, int line) noexcept;
 void* operator new[](std::size_t size, void* where, const char* file, int line) noexcept;
-void operator delete  (void* ptr) noexcept;
-void operator delete[](void* ptr) noexcept;
+void  operator delete  (void* ptr) noexcept;
+void  operator delete[](void* ptr) noexcept;
 
 #ifdef DEBUG_NEW
 #undef DEBUG_NEW

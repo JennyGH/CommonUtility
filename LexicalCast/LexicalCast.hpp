@@ -71,7 +71,7 @@ namespace std
 		}
 	};
 
-	bool _check_bool(const char* from, const size_t len, const char* s)
+	static bool _check_bool(const char* from, const size_t len, const char* s)
 	{
 		for (size_t i = 0; i < len; i++)
 		{

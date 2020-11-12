@@ -1,4 +1,3 @@
-
 #include "DateTime.h"
 
 #if !defined(WIN32) && !defined(_WIN32)
@@ -567,7 +566,7 @@ std::string DateTime::ToLongDateString() const
 {
 	_DateTime* pDateTime = static_cast<_DateTime*>(m_data);
 	char buffer[256] = { 0 };
-	sprintf_s(buffer, "%d��%02d��%02d��", pDateTime->m_year, pDateTime->m_month, pDateTime->m_day);
+	sprintf_s(buffer, "%04d-%02d-%02d", pDateTime->m_year, pDateTime->m_month, pDateTime->m_day);
 	return buffer;
 }
 
@@ -639,8 +638,8 @@ DateTime DateTime::UtcNow()
 
 
 
-const TimeSpan& const TimeSpan::MaxValue = ((1LL << (sizeof(time_t) * 8 - 1)) - 1) / (MILLISECONDS_PER_SECOND * 10);
-const TimeSpan& const TimeSpan::MinValue = ((1LL << (sizeof(time_t) * 8 - 1)) + 1) / (MILLISECONDS_PER_SECOND * 10);
+const TimeSpan& TimeSpan::MaxValue = ((1LL << (sizeof(time_t) * 8 - 1)) - 1) / (MILLISECONDS_PER_SECOND * 10);
+const TimeSpan& TimeSpan::MinValue = ((1LL << (sizeof(time_t) * 8 - 1)) + 1) / (MILLISECONDS_PER_SECOND * 10);
 
 TimeSpan::TimeSpan(time_t ticks) :
 	m_data(new _TimeSpan(ticks)),

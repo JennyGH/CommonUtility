@@ -1,7 +1,8 @@
 #pragma once
 #include <ctime>
 #include <string>
-
+#pragma warning(disable:4227)
+#pragma warning(disable:4244)
 class DateTime;
 class TimeSpan;
 
@@ -72,20 +73,20 @@ private:
 	void* m_data;
 
 public:
-	static const TimeSpan& const MaxValue;
-	static const TimeSpan& const MinValue;
+	static const TimeSpan& MaxValue;
+	static const TimeSpan& MinValue;
 public:
-	const time_t& const Ticks;
-	const double& const TotalDays;
-	const double& const TotalHours;
-	const double& const TotalMinutes;
-	const double& const TotalSeconds;
-	const double& const TotalMilliseconds;
-	const int& const Days;
-	const int& const Hours;
-	const int& const Minutes;
-	const int& const Seconds;
-	const int& const Milliseconds;
+	const time_t& Ticks;
+	const double& TotalDays;
+	const double& TotalHours;
+	const double& TotalMinutes;
+	const double& TotalSeconds;
+	const double& TotalMilliseconds;
+	const int& Days;
+	const int& Hours;
+	const int& Minutes;
+	const int& Seconds;
+	const int& Milliseconds;
 };
 
 class DateTime
@@ -137,15 +138,15 @@ private:
 	void* m_data;
 
 public:
-	const time_t& const UnixTimeStamp;
-	const int& const Year;
-	const int& const Month;
-	const int& const Day;
-	const int& const Hour;
-	const int& const Minute;
-	const int& const Second;
-	const int& const Millisecond;
-	const enum DayOfWeek& const DayOfWeek;
-	const enum DateTimeKind& const Kind;
+	const time_t& UnixTimeStamp;
+	const int& Year;
+	const int& Month;
+	const int& Day;
+	const int& Hour;
+	const int& Minute;
+	const int& Second;
+	const int& Millisecond;
+	const enum DayOfWeek& DayOfWeek;
+	const enum DateTimeKind& Kind;
 };
 

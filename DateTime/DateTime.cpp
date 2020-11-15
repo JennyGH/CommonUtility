@@ -1,7 +1,11 @@
+#include <string.h>
+#include <stdlib.h>
 #include "DateTime.h"
 
 #if !defined(WIN32) && !defined(_WIN32)
+#ifndef sprintf_s
 #define sprintf_s(buffer, fmt, ...) sprintf(buffer, fmt, ##__VA_ARGS__)
+#endif // !sprintf_s
 static inline void assign_tm(struct tm* const from, struct tm* const to)
 {
 	if (NULL == from || NULL == to)
@@ -553,13 +557,13 @@ DateTime & DateTime::AddMilliseconds(double value)
 DateTime DateTime::ToLocalTime() const
 {
 	_DateTime* pDateTime = static_cast<_DateTime*>(m_data);
-	return DateTime(pDateTime->m_unixTimeStamp, DateTimeKind::Local);
+	return DateTime(pDateTime->m_unixTimeStamp, Local);
 }
 
 DateTime DateTime::ToUniversalTime() const
 {
 	_DateTime* pDateTime = static_cast<_DateTime*>(m_data);
-	return DateTime(pDateTime->m_unixTimeStamp, DateTimeKind::Utc);
+	return DateTime(pDateTime->m_unixTimeStamp, Utc);
 }
 
 std::string DateTime::ToLongDateString() const
@@ -633,7 +637,7 @@ DateTime DateTime::Today()
 
 DateTime DateTime::UtcNow()
 {
-	return DateTime(NOW, DateTimeKind::Utc);
+	return DateTime(NOW, Utc);
 }
 
 
@@ -762,7 +766,7 @@ TimeSpan & TimeSpan::Subtract(const TimeSpan & timespan)
 TimeSpan TimeSpan::Duration() const
 {
 	_TimeSpan* pThisTimespan = static_cast<_TimeSpan*>(m_data);
-	return std::abs(pThisTimespan->m_ticks);
+	return pThisTimespan->m_ticks < 0 ? -(pThisTimespan->m_ticks) : pThisTimespan->m_ticks;
 }
 
 TimeSpan TimeSpan::Negate() const

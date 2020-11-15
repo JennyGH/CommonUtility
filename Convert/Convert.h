@@ -5,10 +5,10 @@ class Convert
 	Convert() {};
 	~Convert() {};
 public:
-	static const std::string& ToHex(const unsigned char src[], int len, bool upperCase = false);
-	static const std::string& FromHex(const std::string& hex);
-	static const std::string& ToBase64(const std::string& rawData);
-	static const std::string& ToBase64(const unsigned char src[], int len);
-	static const std::string& FromBase64(const std::string& base64);
+	static std::string ToHex(const unsigned char src[], int len, bool upperCase = false);
+	static std::string FromHex(const std::string& hex);
+	static std::string ToBase64(const std::string& rawData);
+	static std::string ToBase64(const unsigned char src[], int len);
+	static std::string FromBase64(const std::string& base64);
 };
 

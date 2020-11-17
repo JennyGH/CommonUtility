@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "DateTime.h"
 
 #if !defined(WIN32) && !defined(_WIN32)

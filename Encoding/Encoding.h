@@ -4,8 +4,8 @@
 class Encoder;
 class Encoding
 {
-	Encoding() = delete;
-	~Encoding() = default;
+	Encoding();
+	~Encoding();
 public:
 	static Encoder GBK;
 	static Encoder UTF8;

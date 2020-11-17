@@ -1,4 +1,5 @@
 #pragma once
+#if __cplusplus >= 201103L
 #include <string> // std::string
 #include <memory> // std::shared_ptr
 
@@ -8,48 +9,52 @@
 
 #if OS_WINDOWS
 #include <Windows.h>
-#define CALL_STANDARD __stdcall
+#ifndef STDCALL
+#define STDCALL __stdcall
+#endif // !STDCALL
 #else
 #include<dlfcn.h>
-#define CALL_STANDARD
+#ifndef STDCALL
+#define STDCALL
+#endif // !STDCALL
 #endif // OS_WINDOWS
 
 class DynamicLibraryLoader;
 using DynamicLibraryLoaderPtr = std::shared_ptr<DynamicLibraryLoader>;
 class DynamicLibraryLoader
 {
-	DynamicLibraryLoader(void* hInstance = nullptr);
+    DynamicLibraryLoader(void* hInstance = nullptr);
 public:
-	static DynamicLibraryLoaderPtr Load(const std::string& libPath);
+    static DynamicLibraryLoaderPtr Load(const std::string& libPath);
 public:
-	~DynamicLibraryLoader();
+    ~DynamicLibraryLoader();
 
-	template<typename ReturnType, typename ...Args>
-	auto GetFunction(const std::string& functionName)
-	{
-		using FunctionType = ReturnType(CALL_STANDARD *)(Args...);
-		FunctionType pFunction = nullptr;
+    template<typename ReturnType, typename ...Args>
+    auto GetFunction(const std::string& functionName)
+    {
+        using FunctionType = ReturnType(STDCALL *)(Args...);
+        FunctionType pFunction = nullptr;
 
-		if (nullptr == m_hDLL)
-		{
-			throw std::runtime_error("DynamicLibraryLoader is not ready.");
-		}
+        if (nullptr == m_hDLL)
+        {
+            throw std::runtime_error("DynamicLibraryLoader is not ready.");
+        }
 
 #if OS_WINDOWS
-		pFunction = (FunctionType)::GetProcAddress((HINSTANCE)m_hDLL, functionName.c_str());
+        pFunction = (FunctionType)::GetProcAddress((HINSTANCE)m_hDLL, functionName.c_str());
 #else
-		//throw std::runtime_error("DynamicLibraryLoader is not supported in this platform.");
-		pFunction = (FunctionType)::dlsym(hDLL, functionName.c_str());
+        pFunction = (FunctionType)::dlsym(hDLL, functionName.c_str());
 #endif // OS_WINDOWS
 
-		if (nullptr == pFunction)
-		{
-			throw std::runtime_error(("Can not get function address from " + functionName).c_str());
-		}
+        if (nullptr == pFunction)
+        {
+            throw std::runtime_error(("Can not get function address from " + functionName).c_str());
+        }
 
-		return pFunction;
-	}
+        return pFunction;
+    }
 
 private:
-	void* m_hDLL;
+    void* m_hDLL;
 };
+#endif // __cplusplus >= 201103L

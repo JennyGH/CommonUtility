@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include "ConditionVariant.h"
 
 ConditionVariant::ConditionVariant(CRITICAL_SECTION & mutex)

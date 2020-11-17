@@ -1,5 +1,7 @@
 #pragma once
 #include <string>
+#include <stdint.h>
+#include <stdio.h>
 
 #if !defined(WIN32) && !defined(_WIN32)
 
@@ -8,7 +10,7 @@
 #endif // !sprintf_s
 
 #ifndef sscanf_s
-#define sscanf_s(bfufer, format, ...) sscanf(buffer, format, ##__VA_ARGS__)
+#define sscanf_s(buffer, format, ...) sscanf(buffer, format, ##__VA_ARGS__)
 #endif // !sscanf_s
 
 #endif // !defined(WIN32) && !defined(_WIN32)
@@ -17,14 +19,14 @@
 template<typename T>
 struct _Default
 {
-	static std::string ToString(T val) { return std::string(); }
-	static T FromString(const std::string& src) { return T(); }
+    static std::string ToString(T val) { return std::string(); }
+    static T FromString(const std::string& src) { return T(); }
 };
 
 #define RETURN_FORMATED_STRING(bufferSize, format, val) \
 do{\
 	char _buffer[bufferSize] = { 0 };\
-	sprintf_s(_buffer, format, val);\
+	sprintf_s(_buffer, bufferSize, format, val);\
 	return _buffer;\
 } while (0)
 
@@ -32,13 +34,12 @@ do{\
 #define DECLARE_DEFAULT(type, format) \
 template<>struct _Default<type>{\
 static std::string ToString(type val) { RETURN_FORMATED_STRING(64, format, val); }\
-static type FromString(const std::string& src) { type val = type(); sscanf_s(src.c_str(), format, &val); return val;  }\
+static type FromString(const std::string& src) { type val = type(0); sscanf_s(src.c_str(), format, &val); return val;  }\
 }
 
-DECLARE_DEFAULT(short, "%d");
-DECLARE_DEFAULT(int, "%d");
-DECLARE_DEFAULT(long, "%ld");
-DECLARE_DEFAULT(long long, "%lld");
+DECLARE_DEFAULT(int16_t, "%d");
+DECLARE_DEFAULT(int32_t, "%d");
+DECLARE_DEFAULT(int64_t, "%ld");
 
 template<typename T> class Integer;
 typedef Integer<short> Short;
@@ -49,44 +50,44 @@ typedef Integer<long long> Int64;
 template<typename T>
 class Integer
 {
-	static T FromBytes(const unsigned char src[]);
-	static T FromString(const char src[], const char fmt[]);
+    static T FromBytes(const unsigned char src[]);
+    static T FromString(const char src[], const char fmt[]);
 public:
-	static const T Max = (1LL << (sizeof(T) * 8 - 1)) - 1;
-	static const T Min = (1LL << (sizeof(T) * 8 - 1)) + 1;
+    static const T Max = (1LL << (sizeof(T) * 8 - 1)) - 1;
+    static const T Min = (1LL << (sizeof(T) * 8 - 1)) + 1;
 public:
-	Integer();
-	Integer(T val);
-	Integer(const char src[], const char fmt[] = NULL);
-	Integer(const unsigned char src[]);
-	~Integer();
-	operator T() const;
-	operator std::string() const;
-	std::string ToString(const std::string& fmt = "") const;
+    Integer();
+    Integer(T val);
+    Integer(const char src[], const char fmt[] = NULL);
+    Integer(const unsigned char src[]);
+    ~Integer();
+    operator T() const;
+    operator std::string() const;
+    std::string ToString(const std::string& fmt = "") const;
 private:
-	T m_val;
+    T m_val;
 };
 
 template<typename T>
 inline T Integer<T>::FromBytes(const unsigned char src[])
 {
-	return T();
+    return T();
 }
 
 template<typename T>
 inline T Integer<T>::FromString(const char src[], const char fmt[])
 {
-	T val = 0;
+    T val = 0;
 
-	if (NULL == fmt)
-	{
-		return _Default<T>::FromString(src);
-	}
-	else
-	{
-		sscanf_s(src, fmt, &val);
-	}
-	return val;
+    if (NULL == fmt)
+    {
+        return _Default<T>::FromString(src);
+    }
+    else
+    {
+        sscanf_s(src, fmt, &val);
+    }
+    return val;
 }
 
 template<typename T>
@@ -98,19 +99,19 @@ inline Integer<T>::Integer(T val) : m_val(val) {}
 template<typename T>
 inline Integer<T>::Integer(const char src[], const char fmt[]) : m_val(0)
 {
-	if (src != NULL)
-	{
-		m_val = FromString(src, fmt);
-	}
+    if (src != NULL)
+    {
+        m_val = FromString(src, fmt);
+    }
 }
 
 template<typename T>
 inline Integer<T>::Integer(const unsigned char src[]) : m_val(0)
 {
-	if (src != NULL)
-	{
-		m_val = FromBytes(src);
-	}
+    if (src != NULL)
+    {
+        m_val = FromBytes(src);
+    }
 }
 
 template<typename T>
@@ -119,22 +120,22 @@ inline Integer<T>::~Integer() {}
 template<typename T>
 inline Integer<T>::operator T() const
 {
-	return m_val;
+    return m_val;
 }
 
 template<typename T>
 inline Integer<T>::operator std::string() const
 {
-	return ToString();
+    return ToString();
 }
 
 template<typename T>
 inline std::string Integer<T>::ToString(const std::string& fmt) const
 {
-	if (fmt.empty())
-	{
-		return _Default<T>::ToString(m_val);
-	}
+    if (fmt.empty())
+    {
+        return _Default<T>::ToString(m_val);
+    }
 
-	RETURN_FORMATED_STRING(64, fmt.c_str(), m_val);
+    RETURN_FORMATED_STRING(64, fmt.c_str(), m_val);
 }

@@ -1,4 +1,6 @@
-﻿int main(int argc, char *argv[])
+﻿#include <stdio.h>
+int main(int argc, char *argv[])
 {
-	return 0;
+    printf("__cplusplus: %d\n", __cplusplus);
+    return 0;
 }

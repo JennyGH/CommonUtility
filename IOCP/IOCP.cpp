@@ -5,8 +5,8 @@
 #include "CriticalSection.h"
 
 #define EXIT_CODE                       0xFFFFFFFF
-#define MAX_POST_ACCEPT                 10
 #define WORKER_THREADS_PER_PROCESSOR    2
+#define LOG_DEBUG(fmt, ...)             printf(fmt " \n", ##__VA_ARGS__)
 
 #define LOCK \
 ((CriticalSection*)m_hCriticalSection)->Lock();\
@@ -22,12 +22,12 @@ static UINT32								GetCountOfProcessors();
 static int32_t								GetFunctionByGuid(UINT_PTR socket, GUID& guid, LPVOID lpFn, DWORD nSizeOfFn);
 #define GetFunction(socket, guid, lpFn)		GetFunctionByGuid(socket, guid, lpFn, sizeof(lpFn))
 
-IOCP::IOCP(IConnectionFactory *pConnectionFactory, const IOCPSettings& settings) :
+IOCP::IOCP(IConnectionFactory* pConnectionFactory, const IOCPSettings& settings) :
     m_nAF(settings.af),
     m_nProtocol(settings.protocol),
     m_nSendBufferSize(settings.nSendBufferSize),
     m_nRecvBufferSize(settings.nRecvBufferSize <= 0 ? DEFAULT_RECV_BUFFER_SIZE : settings.nRecvBufferSize),
-    m_hListenContext(NULL),
+    m_hListenSocketContext(NULL),
     m_pAddress(NULL),
     m_hCompletionPort(CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0)),
     m_hCriticalSection(new CriticalSection()),
@@ -41,24 +41,24 @@ IOCP::IOCP(IConnectionFactory *pConnectionFactory, const IOCPSettings& settings)
         OnError(NULL, WSAGetLastError());
         return;
     }
-    SOCKET socket = INVALID_SOCKET;
-    if (INVALID_SOCKET == (socket = WSASocket(m_nAF, SOCK_STREAM, m_nProtocol, NULL, 0, WSA_FLAG_OVERLAPPED)))
+    SOCKET listenSocket = INVALID_SOCKET;
+    if (INVALID_SOCKET == (listenSocket = WSASocket(m_nAF, SOCK_STREAM, m_nProtocol, NULL, 0, WSA_FLAG_OVERLAPPED)))
     {
         OnError(NULL, WSAGetLastError());
         return;
     }
-    m_hListenContext = new PER_SOCKET_CONTEXT(socket, NULL);
-    if (SOCKET_ERROR == GetFunction(socket, g_guidAcceptEx, &g_lpfnAcceptEx))
+    m_hListenSocketContext = new PER_SOCKET_CONTEXT(listenSocket);
+    if (SOCKET_ERROR == GetFunction(listenSocket, g_guidAcceptEx, &g_lpfnAcceptEx))
     {
         OnError(NULL, WSAGetLastError());
         return;
     }
-    if (SOCKET_ERROR == GetFunction(socket, g_guidDisconnectEx, &g_lpfnDisconnectEx))
+    if (SOCKET_ERROR == GetFunction(listenSocket, g_guidDisconnectEx, &g_lpfnDisconnectEx))
     {
         OnError(NULL, WSAGetLastError());
         return;
     }
-    if (SOCKET_ERROR == GetFunction(socket, g_guidGetAcceptExSockaddrs, &g_lpfnGetAcceptExSockaddrs))
+    if (SOCKET_ERROR == GetFunction(listenSocket, g_guidGetAcceptExSockaddrs, &g_lpfnGetAcceptExSockaddrs))
     {
         OnError(NULL, WSAGetLastError());
         return;
@@ -71,7 +71,7 @@ IOCP::~IOCP()
 
     ::CloseHandle(m_hCompletionPort);
 
-    delete ((PER_SOCKET_CONTEXT_PTR)m_hListenContext);
+    delete ((PER_SOCKET_CONTEXT_PTR)m_hListenSocketContext);
     delete ((IConnectionFactory*)m_pFactory);
     delete ((CriticalSection*)m_hCriticalSection);
 
@@ -130,6 +130,7 @@ unsigned WINAPI IOCP::_WorkerThread(HANDLE hHandle)
         }
 
         PER_IO_CONTEXT_PTR pIOContext = CONTAINING_RECORD(pOverlapped, PER_IO_CONTEXT, overlapped);
+        IConnectionBase* pConnection = static_cast<IConnectionBase*>(pSocketContext->pConnection);
 
         // 判断是否有客户端断开了
         if ((0 == dwBytesTransfered) &&
@@ -137,7 +138,7 @@ unsigned WINAPI IOCP::_WorkerThread(HANDLE hHandle)
         {
             // 释放掉对应的资源
             // Remove client socket context.
-            self.OnClientLost((IConnectionBase*)pSocketContext->pConnection);
+            self.OnClientLost(pConnection);
             self._RemoveClientSocketContext(pSocketContext);
             continue;
         }
@@ -147,7 +148,7 @@ unsigned WINAPI IOCP::_WorkerThread(HANDLE hHandle)
             {
             case OverlappedOpType::Accept:
             {
-                self._DoAccept(pSocketContext, pIOContext, dwBytesTransfered);
+                self._DoAccept(pIOContext, dwBytesTransfered);
                 break;
             }
             case OverlappedOpType::Recv:
@@ -158,14 +159,28 @@ unsigned WINAPI IOCP::_WorkerThread(HANDLE hHandle)
             case OverlappedOpType::Send:
             {
                 self.OnSent(
-                    (IConnectionBase*)pSocketContext->pConnection,
+                    pConnection,
                     (CONST BYTE*)pIOContext->wsaBuf.buf,
                     pIOContext->wsaBuf.len
                 );
+                // 释放IO上下文
+                pSocketContext->RemoveContext(pIOContext);
+                break;
+            }
+            case OverlappedOpType::Remove:
+            {
+                LOG_DEBUG("Remove user, pSocketContext: %s, count of PER_IO_CONTEXT: %d", pConnection->GetAddress().c_str(), pSocketContext->GetIOContextCount());
+                delete pSocketContext;
+                break;
+            }
+            case OverlappedOpType::Disconnect:
+            {
+                LOG_DEBUG("User disconnect, pSocketContext: %s, count of PER_IO_CONTEXT: %d", pConnection->GetAddress().c_str(), pSocketContext->GetIOContextCount());
+                delete pSocketContext;
                 break;
             }
             default:
-                self.OnError((IConnectionBase*)pSocketContext->pConnection, WSAGetLastError());
+                self.OnError(pConnection, WSAGetLastError());
                 //TRACE(_T("_WorkThread中的 pIoContext->m_OpType 参数异常.\n"));
                 break;
             }
@@ -175,23 +190,23 @@ unsigned WINAPI IOCP::_WorkerThread(HANDLE hHandle)
     return 0;
 }
 
-BOOL IOCP::_DoAccept(HANDLE hSocketContext, HANDLE hIOContext, DWORD dwBytes)
+BOOL IOCP::_DoAccept(HANDLE hIOContext, DWORD dwBytes)
 {
-    PER_SOCKET_CONTEXT_PTR pSocketContext = static_cast<PER_SOCKET_CONTEXT_PTR>(hSocketContext);
-    PER_IO_CONTEXT_PTR pIOContext = static_cast<PER_IO_CONTEXT_PTR>(hIOContext);
-    PER_SOCKET_CONTEXT_PTR pListenSocketContext = static_cast<PER_SOCKET_CONTEXT_PTR>(this->m_hListenContext);
+    PER_IO_CONTEXT_PTR pOldIOContext = static_cast<PER_IO_CONTEXT_PTR>(hIOContext);
+    PER_SOCKET_CONTEXT_PTR pAcceptSocketContext = new PER_SOCKET_CONTEXT(pOldIOContext->opSocket);
+    PER_SOCKET_CONTEXT_PTR pListenSocketContext = static_cast<PER_SOCKET_CONTEXT_PTR>(m_hListenSocketContext);
 
     // 有新用户连接时才创建新的连接对象
     IConnectionBase* pConnection = m_pFactory->NewConnection();
-    pSocketContext->pConnection = pConnection;
+    pAcceptSocketContext->pConnection = pConnection;
     SOCKADDR_IN* pRemoteAddr = NULL;
     SOCKADDR_IN* pLocaleAddr = NULL;
     INT32 nRemoteAddrSize = sizeof(SOCKADDR_IN);
     INT32 nLocaleAddrSize = sizeof(SOCKADDR_IN);
 
     g_lpfnGetAcceptExSockaddrs(
-        pIOContext->wsaBuf.buf,
-        pIOContext->wsaBuf.len - ((sizeof(SOCKADDR_IN) + 16) * 2),
+        pOldIOContext->wsaBuf.buf,
+        pOldIOContext->wsaBuf.len - ((sizeof(SOCKADDR_IN) + 16) * 2),
         sizeof(SOCKADDR_IN) + 16,
         sizeof(SOCKADDR_IN) + 16,
         (LPSOCKADDR*)&pLocaleAddr,
@@ -201,84 +216,77 @@ BOOL IOCP::_DoAccept(HANDLE hSocketContext, HANDLE hIOContext, DWORD dwBytes)
 
     pConnection->SetAddress(pRemoteAddr, nRemoteAddrSize);
 
-    PER_SOCKET_CONTEXT_PTR pNewSocketContext = new PER_SOCKET_CONTEXT(pIOContext->opSocket, NULL);
-
     // 参数设置完毕，将这个 Socket 和完成端口绑定(这也是一个关键步骤)
     HANDLE hTemp = ::CreateIoCompletionPort(
-        (HANDLE)pNewSocketContext->socket,
+        (HANDLE)pAcceptSocketContext->socket,
         this->m_hCompletionPort,
-        (DWORD)pNewSocketContext, 0);
+        (ULONG_PTR)pAcceptSocketContext, 0);
     if (NULL == hTemp)
     {
-        delete pNewSocketContext;
+        delete pAcceptSocketContext;
         OnError(NULL, WSAGetLastError());
+        // 释放旧的IO上下文
+        pListenSocketContext->RemoveContext(pOldIOContext);
         return FALSE;
     }
-
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    // 3. 继续，建立其下的IoContext，用于在这个Socket上投递第一个Recv数据请求
-    PER_IO_CONTEXT_PTR pNewIoContext = pSocketContext->NewIOContext(OverlappedOpType::Recv);
 
     // 绑定完毕之后，就可以开始在这个 Socket 上投递完成请求了
-    if (FALSE == this->_PostRecv(pNewIoContext))
+    if (FALSE == this->_PostRecv(pAcceptSocketContext))
     {
-        pSocketContext->RemoveContext(pNewIoContext);
+        // 释放旧的IO上下文
+        pListenSocketContext->RemoveContext(pOldIOContext);
         return FALSE;
     }
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    // 4. 如果投递成功，那么就把这个有效的客户端信息，加入到ContextList中去(需要统一管理，方便释放资源)
+    // 投递 Recv 成功，将当前用户添加到列表中
     ((CriticalSection*)m_hCriticalSection)->Lock();
-    this->m_clientSocketContexts[pConnection] = pSocketContext;
+    this->m_clientSocketContexts[pConnection] = pAcceptSocketContext;
     ((CriticalSection*)m_hCriticalSection)->UnLock();
 
     // 回调通知上层
-    OnAccepted(pConnection, (CONST BYTE*)pIOContext->wsaBuf.buf, dwBytes);
+    OnAccepted(pConnection, (CONST BYTE*)pOldIOContext->wsaBuf.buf, dwBytes);
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-    // 5. 使用完毕之后，把 Listen Socket 的那个 IoContext 重置，然后准备投递新的 AcceptEx
-    pIOContext->ResetBuffer();
+    // 释放旧的IO上下文
+    pListenSocketContext->RemoveContext(pOldIOContext);
 
-    return this->_PostAccept(pIOContext);
+    // 再投递一个新的 Accept 请求
+    return this->_PostAccept();
 }
 
-BOOL IOCP::_PostAccept(HANDLE hHandle)
+BOOL IOCP::_PostAccept()
 {
-    PER_IO_CONTEXT_PTR pAcceptIOContext = static_cast<PER_IO_CONTEXT_PTR>(hHandle);
-    PER_SOCKET_CONTEXT_PTR pSocketContext = static_cast<PER_SOCKET_CONTEXT_PTR>(this->m_hListenContext);
 
-    //::ASSERT(INVALID_SOCKET != pSocketContext->socket);
-
-    // 准备参数
-    pAcceptIOContext->opType = OverlappedOpType::Accept;
     DWORD dwBytes = 0;
-    WSABUF *pWSABuffer = &pAcceptIOContext->wsaBuf;
-    OVERLAPPED *pOverlapped = &pAcceptIOContext->overlapped;
-
     // 为以后新连入的客户端先准备好 Socket
-    pAcceptIOContext->opSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
-    if (INVALID_SOCKET == pAcceptIOContext->opSocket)
+    SOCKET acceptSocket = ::WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
+    if (INVALID_SOCKET == acceptSocket)
     {
         // 创建用于Accept的Socket失败
         OnError(NULL, WSAGetLastError());
         return FALSE;
     }
 
+    PER_SOCKET_CONTEXT_PTR pListenSocketContext = static_cast<PER_SOCKET_CONTEXT_PTR>(m_hListenSocketContext);
+    PER_IO_CONTEXT_PTR pNewIOContext = pListenSocketContext->NewIOContext(OverlappedOpType::Accept);
+    pNewIOContext->opSocket = acceptSocket;
+
     // 投递 AcceptEx
     if (FALSE == g_lpfnAcceptEx(
-        pSocketContext->socket,
-        pAcceptIOContext->opSocket,
-        pWSABuffer->buf,
-        pWSABuffer->len - ((sizeof(SOCKADDR_IN) + 16) * 2),
+        pListenSocketContext->socket,
+        acceptSocket,
+        pNewIOContext->wsaBuf.buf,
+        pNewIOContext->wsaBuf.len - ((sizeof(SOCKADDR_IN) + 16) * 2),
         sizeof(SOCKADDR_IN) + 16,
         sizeof(SOCKADDR_IN) + 16,
-        &dwBytes, pOverlapped))
+        &dwBytes,
+        &pNewIOContext->overlapped))
     {
         int err = WSAGetLastError();
         if (WSA_IO_PENDING != err)
         {
             // 投递 AcceptEx 请求失败
             OnError(NULL, err);
+            pListenSocketContext->RemoveContext(pNewIOContext);
             return FALSE;
         }
     }
@@ -289,35 +297,35 @@ BOOL IOCP::_PostAccept(HANDLE hHandle)
 BOOL IOCP::_DoRecv(HANDLE hSocketContext, HANDLE hIOContext, DWORD dwBytes)
 {
     PER_SOCKET_CONTEXT_PTR pSocketContext = static_cast<PER_SOCKET_CONTEXT_PTR>(hSocketContext);
-    PER_IO_CONTEXT_PTR pIOContext = static_cast<PER_IO_CONTEXT_PTR>(hIOContext);
-    PER_SOCKET_CONTEXT_PTR pListenSocketContext = static_cast<PER_SOCKET_CONTEXT_PTR>(this->m_hListenContext);
+    PER_IO_CONTEXT_PTR pOldIOContext = static_cast<PER_IO_CONTEXT_PTR>(hIOContext);
     // 先把上一次的数据显示出现，然后就重置状态，发出下一个 Recv 请求
-    OnRecved((IConnectionBase*)pSocketContext->pConnection, (CONST BYTE*)pIOContext->wsaBuf.buf, dwBytes);
+    OnRecved((IConnectionBase*)pSocketContext->pConnection, (CONST BYTE*)pOldIOContext->wsaBuf.buf, dwBytes);
+    // 释放旧的IO上下文
+    pSocketContext->RemoveContext(pOldIOContext);
     // 然后开始投递下一个WSARecv请求
-    return _PostRecv(pIOContext);
+    return _PostRecv(pSocketContext);
 }
 
-BOOL IOCP::_PostRecv(HANDLE hHandle)
+BOOL IOCP::_PostRecv(HANDLE hSocketContext)
 {
-    PER_IO_CONTEXT_PTR pIOContext = static_cast<PER_IO_CONTEXT_PTR>(hHandle);
-    PER_SOCKET_CONTEXT_PTR pListenSocketContext = static_cast<PER_SOCKET_CONTEXT_PTR>(this->m_hListenContext);
-    // 初始化变量
+    PER_SOCKET_CONTEXT_PTR pClientSocketContext = static_cast<PER_SOCKET_CONTEXT_PTR>(hSocketContext);
     DWORD dwFlags = 0;
     DWORD dwBytes = 0;
-    WSABUF *pWSABuffer = &pIOContext->wsaBuf;
-    OVERLAPPED *pOverlapped = &pIOContext->overlapped;
 
-    pIOContext->ResetBuffer();
-    pIOContext->opType = OverlappedOpType::Recv;
-
+    // 创建一个新的IO上下文
+    PER_IO_CONTEXT_PTR pNewIOContext = pClientSocketContext->NewIOContext(OverlappedOpType::Recv);
     // 初始化完成后，投递 WSARecv 请求
-    INT32 nBytesRecv = ::WSARecv(pIOContext->opSocket, pWSABuffer, 1, &dwBytes, &dwFlags, pOverlapped, NULL);
-
+    INT32 nBytesRecv = ::WSARecv(pClientSocketContext->socket, &pNewIOContext->wsaBuf, 1, &dwBytes, &dwFlags, &pNewIOContext->overlapped, NULL);
     // 如果返回值错误，并且错误的代码并非是 Pending 的话，那就说明这个重叠请求失败了
-    if ((SOCKET_ERROR == nBytesRecv) && (WSA_IO_PENDING != WSAGetLastError()))
+    if ((SOCKET_ERROR == nBytesRecv))
     {
-        OnError(NULL, WSAGetLastError());
-        return FALSE;
+        int err = WSAGetLastError();
+        if (WSA_IO_PENDING != err)
+        {
+            OnError((IConnectionBase*)pClientSocketContext->pConnection, err);
+            pClientSocketContext->RemoveContext(pNewIOContext);
+            return FALSE;
+        }
     }
     return TRUE;
 }
@@ -329,14 +337,19 @@ VOID IOCP::_RemoveClientSocketContext(HANDLE hSocketContext)
     IConnectionBase* pConnection = (IConnectionBase*)(pSocketContext->pConnection);
     // 从映射表中移除
     this->m_clientSocketContexts.erase(pConnection);
-    // 释放上下文信息
-    delete pSocketContext;
     ((CriticalSection*)this->m_hCriticalSection)->UnLock();
     // 通知上层
     OnRemoved(pConnection);
+    // 释放上下文信息
+    if (NULL != pSocketContext)
+    {
+        PER_IO_CONTEXT_PTR pIOContext = pSocketContext->NewIOContext(OverlappedOpType::Disconnect);
+        g_lpfnDisconnectEx(pIOContext->opSocket, &pIOContext->overlapped, 0, 0);
+        //delete pSocketContext;
+    }
 }
 
-void IOCP::Start(const void * addr, UINT32 sizeOfAddress)
+void IOCP::Start(const void* addr, UINT32 sizeOfAddress)
 {
     if (addr == NULL)
     {
@@ -348,18 +361,18 @@ void IOCP::Start(const void * addr, UINT32 sizeOfAddress)
         OnError(NULL, ERROR_INVALID_HANDLE);
         return;
     }
-    PER_SOCKET_CONTEXT_PTR hSocketContext = static_cast<PER_SOCKET_CONTEXT_PTR>(this->m_hListenContext);
     sockaddr* address = (sockaddr*)addr;
     address->sa_family = m_nAF;
-    if (SOCKET_ERROR == ::bind(hSocketContext->socket, address, sizeOfAddress))
+    PER_SOCKET_CONTEXT_PTR pListenSocketContext = static_cast<PER_SOCKET_CONTEXT_PTR>(m_hListenSocketContext);
+    if (SOCKET_ERROR == ::bind(pListenSocketContext->socket, address, sizeOfAddress))
     {
         OnError(NULL, WSAGetLastError());
         return;
     }
 
     //创建完成端口
-    ::CreateIoCompletionPort((HANDLE)hSocketContext->socket, m_hCompletionPort, (DWORD)hSocketContext, 0);
-    if (SOCKET_ERROR == ::listen(hSocketContext->socket, SOMAXCONN))
+    ::CreateIoCompletionPort((HANDLE)pListenSocketContext->socket, m_hCompletionPort, (ULONG_PTR)pListenSocketContext, 0);
+    if (SOCKET_ERROR == ::listen(pListenSocketContext->socket, SOMAXCONN))
     {
         OnError(NULL, WSAGetLastError());
         return;
@@ -371,16 +384,9 @@ void IOCP::Start(const void * addr, UINT32 sizeOfAddress)
     }
 
     // 为AcceptEx 准备参数，然后投递AcceptEx I/O请求
-    PER_SOCKET_CONTEXT_PTR hListenContext = static_cast<PER_SOCKET_CONTEXT_PTR>(m_hListenContext);
-    for (int i = 0; i < MAX_POST_ACCEPT; i++)
+    for (int i = 0; i < m_nCountOfThreads; i++)
     {
-        // 新建一个IO_CONTEXT
-        PER_IO_CONTEXT* pAcceptIoContext = hListenContext->NewIOContext(OverlappedOpType::Accept);
-        if (FALSE == this->_PostAccept(pAcceptIoContext))
-        {
-            hListenContext->RemoveContext(pAcceptIoContext);
-            return;
-        }
+        this->_PostAccept();
     }
 }
 void IOCP::Send(IConnectionBase* pConnection, const BYTE data[], UINT32 size)
@@ -402,14 +408,18 @@ void IOCP::Send(IConnectionBase* pConnection, const BYTE data[], UINT32 size)
         OnError(pConnection, ERROR_INVALID_HANDLE);
         return;
     }
-    PER_IO_CONTEXT_PTR pIOContext = pSocketContext->NewIOContext(OverlappedOpType::Send);
-    memcpy_s(pIOContext->wsaBuf.buf, pIOContext->wsaBuf.len, data, size);
-    if (SOCKET_ERROR == ::WSASend(pSocketContext->socket, &pIOContext->wsaBuf, 1, &dwBytes, dwFlags, &pIOContext->overlapped, NULL))
+    // 创建一个IO上下文
+    PER_IO_CONTEXT_PTR pNewIOContext = pSocketContext->NewIOContext(OverlappedOpType::Send);
+    // 将要发送的数据拷贝到IO上下文缓冲区
+    memcpy_s(pNewIOContext->wsaBuf.buf, pNewIOContext->wsaBuf.len, data, size);
+    // 投递一个 Send 请求
+    if (SOCKET_ERROR == ::WSASend(pSocketContext->socket, &pNewIOContext->wsaBuf, 1, &dwBytes, dwFlags, &pNewIOContext->overlapped, NULL))
     {
         int err = ::WSAGetLastError();
         if (WSA_IO_PENDING != err)
         {
             OnError(pConnection, err);
+            pSocketContext->RemoveContext(pNewIOContext);
         }
         return;
     }
@@ -426,12 +436,18 @@ void IOCP::Remove(IConnectionBase* pConnection)
         pSocketContext = static_cast<PER_SOCKET_CONTEXT_PTR>(found->second);
         // 再从映射表中移除当前连接对象的信息
         this->m_clientSocketContexts.erase(pConnection);
-        // 释放上下文信息
-        delete pSocketContext;
     }
     ((CriticalSection*)this->m_hCriticalSection)->UnLock();
     // 通知上层
     OnRemoved(pConnection);
+    // 释放上下文信息
+    if (NULL != pSocketContext)
+    {
+
+        PER_IO_CONTEXT_PTR pIOContext = pSocketContext->NewIOContext(OverlappedOpType::Remove);
+        g_lpfnDisconnectEx(pIOContext->opSocket, &pIOContext->overlapped, 0, 0);
+        //delete pSocketContext;
+    }
     return;
 }
 

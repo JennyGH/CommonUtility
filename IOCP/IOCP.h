@@ -21,10 +21,10 @@ class IOCP
 private:
     static unsigned WINAPI _WorkerThread(HANDLE hHandle);
 private:
-    BOOL _DoAccept(HANDLE hSocketContext, HANDLE hIOContext, DWORD dwBytes);
-    BOOL _PostAccept(HANDLE hIOContext);
+    BOOL _DoAccept(HANDLE hIOContext, DWORD dwBytes);
+    BOOL _PostAccept();
     BOOL _DoRecv(HANDLE hSocketContext, HANDLE hIOContext, DWORD dwBytes);
-    BOOL _PostRecv(HANDLE hIOContext);
+    BOOL _PostRecv(HANDLE hSocketContext);
     VOID _RemoveClientSocketContext(HANDLE hSocketContext);
 public:
     IOCP(IConnectionFactory * pConnectionFactory,
@@ -49,7 +49,8 @@ protected:
 
 private:
     UINT32				                    m_nAF;
-    HANDLE			                        m_hListenContext;
+    //UINT_PTR			                    m_socket;
+    HANDLE                                  m_hListenSocketContext;
     UINT32				                    m_nProtocol;
     UINT32				                    m_nRecvBufferSize;
     UINT32				                    m_nSendBufferSize;

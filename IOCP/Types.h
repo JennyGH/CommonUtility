@@ -3,10 +3,12 @@
 #include <list>
 enum OverlappedOpType
 {
-    None = 0,
-    Accept,
-    Recv,
-    Send,
+    None = 0,   // 无状态
+    Accept,     // 接收用户
+    Recv,       // 接收数据
+    Send,       // 发送数据
+    Remove,     // 移除用户
+    Disconnect, // 用户断开
 };
 
 #define MAX_BUFFER_LEN 1024
@@ -38,22 +40,25 @@ typedef struct PER_IO_CONTEXT
     }
 
 }
-PER_IO_CONTEXT, *PER_IO_CONTEXT_PTR;
+PER_IO_CONTEXT, * PER_IO_CONTEXT_PTR;
 #undef MAX_BUFFER_LEN
 
 typedef struct PER_SOCKET_CONTEXT
 {
+public:
     HANDLE                          pConnection;
     SOCKET                          socket;
-    std::list<PER_IO_CONTEXT_PTR>   ioContexts;
+private:
     CRITICAL_SECTION                criticalSection;
+    std::list<PER_IO_CONTEXT_PTR>   ioContexts;
 
+public:
     // 初始化
-    PER_SOCKET_CONTEXT(SOCKET socket, void* pConnection)
+    PER_SOCKET_CONTEXT(SOCKET socket)
     {
         ::InitializeCriticalSection(&criticalSection);
         this->socket = socket;
-        this->pConnection = pConnection;
+        this->pConnection = NULL;
     }
 
     // 释放资源
@@ -64,6 +69,16 @@ typedef struct PER_SOCKET_CONTEXT
             ::closesocket(socket);
             socket = INVALID_SOCKET;
         }
+        ::EnterCriticalSection(&criticalSection);
+        std::list<PER_IO_CONTEXT_PTR>::iterator iter = ioContexts.begin();
+        std::list<PER_IO_CONTEXT_PTR>::iterator end = ioContexts.end();
+        for (iter; iter != end; iter++)
+        {
+            PER_IO_CONTEXT_PTR ptr = *iter;
+            delete ptr;
+            *iter = NULL;
+        }
+        ::LeaveCriticalSection(&criticalSection);
         ::DeleteCriticalSection(&criticalSection);
     }
 
@@ -91,11 +106,22 @@ typedef struct PER_SOCKET_CONTEXT
             if (*iter == pIOContext)
             {
                 ioContexts.erase(iter);
-                delete pIOContext;
                 break;
             }
         }
         ::LeaveCriticalSection(&criticalSection);
+        if (NULL != pIOContext)
+        {
+            delete pIOContext;
+        }
+    }
+
+    std::size_t GetIOContextCount()
+    {
+        ::EnterCriticalSection(&criticalSection);
+        std::size_t nCount = ioContexts.size();
+        ::LeaveCriticalSection(&criticalSection);
+        return nCount;
     }
 }
-PER_SOCKET_CONTEXT, *PER_SOCKET_CONTEXT_PTR;
+PER_SOCKET_CONTEXT, * PER_SOCKET_CONTEXT_PTR;

@@ -1,4 +1,4 @@
-PROJECT(CommonUtility)
+PROJECT(IOCP)
 
 FILE(GLOB_RECURSE all_files
     ${CMAKE_CURRENT_SOURCE_DIR}/*.h
@@ -18,8 +18,13 @@ SOURCE_GROUP("Header Files" FILES "${include_files}")
 SOURCE_GROUP("Source Files" FILES "${src_files}")
 
 INCLUDE_DIRECTORIES(
-    ${PROJECT_ROOT_PATH}/Scope
-    ${PROJECT_ROOT_PATH}/SmartPointer
+    # ${PROJECT_ROOT_PATH}/Scope
+    # ${PROJECT_ROOT_PATH}/SmartPointer
 )
 
-ADD_EXECUTABLE(IOCPCommunication ${all_files})
+ADD_EXECUTABLE(${PROJECT_NAME} ${all_files})
+
+TARGET_LINK_LIBRARIES(
+    ${PROJECT_NAME}
+    ws2_32
+)

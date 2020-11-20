@@ -40,7 +40,7 @@ typedef struct PER_IO_CONTEXT
     }
 
 }
-PER_IO_CONTEXT, * PER_IO_CONTEXT_PTR;
+PER_IO_CONTEXT, *PER_IO_CONTEXT_PTR;
 #undef MAX_BUFFER_LEN
 
 typedef struct PER_SOCKET_CONTEXT
@@ -75,6 +75,15 @@ public:
         for (iter; iter != end; iter++)
         {
             PER_IO_CONTEXT_PTR ptr = *iter;
+            BOOL bSuccess = ::CancelIoEx((HANDLE)ptr->opSocket, &ptr->overlapped);
+            if (!bSuccess)
+            {
+                int err = WSAGetLastError();
+                if (WSA_IO_PENDING != err)
+                {
+                    // CancelIoEx FAILED.
+                }
+            }
             delete ptr;
             *iter = NULL;
         }
@@ -124,4 +133,4 @@ public:
         return nCount;
     }
 }
-PER_SOCKET_CONTEXT, * PER_SOCKET_CONTEXT_PTR;
+PER_SOCKET_CONTEXT, *PER_SOCKET_CONTEXT_PTR;

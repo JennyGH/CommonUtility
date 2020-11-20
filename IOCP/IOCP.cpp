@@ -12,15 +12,15 @@
 ((CriticalSection*)m_hCriticalSection)->Lock();\
 common::raii::scope_member_function_noparam<CriticalSection, void> scope_lock((CriticalSection*)m_hCriticalSection, &CriticalSection::UnLock)
 
-static GUID									g_guidAcceptEx = WSAID_ACCEPTEX;
-static GUID									g_guidDisconnectEx = WSAID_DISCONNECTEX;
-static GUID									g_guidGetAcceptExSockaddrs = WSAID_GETACCEPTEXSOCKADDRS;
-static LPFN_ACCEPTEX						g_lpfnAcceptEx = NULL;
-static LPFN_DISCONNECTEX					g_lpfnDisconnectEx = NULL;
-static LPFN_GETACCEPTEXSOCKADDRS			g_lpfnGetAcceptExSockaddrs = NULL;
-static UINT32								GetCountOfProcessors();
-static int32_t								GetFunctionByGuid(UINT_PTR socket, GUID& guid, LPVOID lpFn, DWORD nSizeOfFn);
-#define GetFunction(socket, guid, lpFn)		GetFunctionByGuid(socket, guid, lpFn, sizeof(lpFn))
+static GUID                                     g_guidAcceptEx = WSAID_ACCEPTEX;
+static GUID                                     g_guidDisconnectEx = WSAID_DISCONNECTEX;
+static GUID                                     g_guidGetAcceptExSockaddrs = WSAID_GETACCEPTEXSOCKADDRS;
+static LPFN_ACCEPTEX                            g_lpfnAcceptEx = NULL;
+static LPFN_DISCONNECTEX                        g_lpfnDisconnectEx = NULL;
+static LPFN_GETACCEPTEXSOCKADDRS                g_lpfnGetAcceptExSockaddrs = NULL;
+static UINT32                                   GetCountOfProcessors();
+static INT32                                    GetFunctionByGuid(UINT_PTR socket, GUID& guid, LPVOID lpFn, DWORD nSizeOfFn);
+#define GetFunction(socket, guid, lpFn)         GetFunctionByGuid(socket, guid, lpFn, sizeof(lpFn))
 
 IOCP::IOCP(IConnectionFactory* pConnectionFactory, const IOCPSettings& settings) :
     m_nAF(settings.af),
@@ -78,7 +78,7 @@ IOCP::~IOCP()
     WSACleanup();
 }
 
-static int32_t GetFunctionByGuid(UINT_PTR socket, GUID& guid, LPVOID lpFn, DWORD nSizeOfFn)
+static INT32 GetFunctionByGuid(UINT_PTR socket, GUID& guid, LPVOID lpFn, DWORD nSizeOfFn)
 {
     DWORD dwBytes = 0;
     return WSAIoctl(
@@ -199,22 +199,43 @@ BOOL IOCP::_DoAccept(HANDLE hIOContext, DWORD dwBytes)
     // 有新用户连接时才创建新的连接对象
     IConnectionBase* pConnection = m_pFactory->NewConnection();
     pAcceptSocketContext->pConnection = pConnection;
-    SOCKADDR_IN* pRemoteAddr = NULL;
-    SOCKADDR_IN* pLocaleAddr = NULL;
-    INT32 nRemoteAddrSize = sizeof(SOCKADDR_IN);
-    INT32 nLocaleAddrSize = sizeof(SOCKADDR_IN);
+    SOCKADDR* pRemoteAddr = NULL;
+    SOCKADDR* pLocaleAddr = NULL;
+    INT32 nRemoteAddrSize = 0;
+    INT32 nLocaleAddrSize = 0;
 
     g_lpfnGetAcceptExSockaddrs(
         pOldIOContext->wsaBuf.buf,
-        pOldIOContext->wsaBuf.len - ((sizeof(SOCKADDR_IN) + 16) * 2),
+        m_isAcceptWithData ? (pOldIOContext->wsaBuf.len - ((sizeof(SOCKADDR_IN) + 16) * 2)) : 0,
         sizeof(SOCKADDR_IN) + 16,
         sizeof(SOCKADDR_IN) + 16,
-        (LPSOCKADDR*)&pLocaleAddr,
+        &pLocaleAddr,
         &nLocaleAddrSize,
-        (LPSOCKADDR*)&pRemoteAddr,
+        &pRemoteAddr,
         &nRemoteAddrSize);
 
     pConnection->SetAddress(pRemoteAddr, nRemoteAddrSize);
+
+    //Set socket options.
+    {
+        LINGER lingerStruct;
+        lingerStruct.l_onoff = 1;
+        lingerStruct.l_linger = 0;
+        ::setsockopt(
+            pAcceptSocketContext->socket,
+            SOL_SOCKET,
+            SO_UPDATE_ACCEPT_CONTEXT,
+            (char*)&(pListenSocketContext->socket),
+            sizeof(pListenSocketContext->socket)
+        );
+        ::setsockopt(
+            pAcceptSocketContext->socket,
+            SOL_SOCKET,
+            SO_LINGER,
+            (char *)&lingerStruct,
+            sizeof(lingerStruct)
+        );
+    }
 
     // 参数设置完毕，将这个 Socket 和完成端口绑定(这也是一个关键步骤)
     HANDLE hTemp = ::CreateIoCompletionPort(
@@ -255,7 +276,6 @@ BOOL IOCP::_DoAccept(HANDLE hIOContext, DWORD dwBytes)
 
 BOOL IOCP::_PostAccept()
 {
-
     DWORD dwBytes = 0;
     // 为以后新连入的客户端先准备好 Socket
     SOCKET acceptSocket = ::WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
@@ -275,7 +295,7 @@ BOOL IOCP::_PostAccept()
         pListenSocketContext->socket,
         acceptSocket,
         pNewIOContext->wsaBuf.buf,
-        pNewIOContext->wsaBuf.len - ((sizeof(SOCKADDR_IN) + 16) * 2),
+        m_isAcceptWithData ? pNewIOContext->wsaBuf.len - ((sizeof(SOCKADDR_IN) + 16) * 2) : 0,
         sizeof(SOCKADDR_IN) + 16,
         sizeof(SOCKADDR_IN) + 16,
         &dwBytes,
@@ -338,14 +358,21 @@ VOID IOCP::_RemoveClientSocketContext(HANDLE hSocketContext)
     // 从映射表中移除
     this->m_clientSocketContexts.erase(pConnection);
     ((CriticalSection*)this->m_hCriticalSection)->UnLock();
-    // 通知上层
-    OnRemoved(pConnection);
     // 释放上下文信息
     if (NULL != pSocketContext)
     {
-        PER_IO_CONTEXT_PTR pIOContext = pSocketContext->NewIOContext(OverlappedOpType::Disconnect);
-        g_lpfnDisconnectEx(pIOContext->opSocket, &pIOContext->overlapped, 0, 0);
-        //delete pSocketContext;
+        //PER_IO_CONTEXT_PTR pIOContext = pSocketContext->NewIOContext(OverlappedOpType::Disconnect);
+        //BOOL bSuccess = g_lpfnDisconnectEx(pIOContext->opSocket, &pIOContext->overlapped, 0, 0);
+        //if (!bSuccess)
+        //{
+        //    int err = WSAGetLastError();
+        //    if (WSA_IO_PENDING != err)
+        //    {
+        //        OnError(pConnection, err);
+        //    }
+        //}
+
+        delete pSocketContext;
     }
 }
 
@@ -443,10 +470,17 @@ void IOCP::Remove(IConnectionBase* pConnection)
     // 释放上下文信息
     if (NULL != pSocketContext)
     {
-
-        PER_IO_CONTEXT_PTR pIOContext = pSocketContext->NewIOContext(OverlappedOpType::Remove);
-        g_lpfnDisconnectEx(pIOContext->opSocket, &pIOContext->overlapped, 0, 0);
-        //delete pSocketContext;
+        //PER_IO_CONTEXT_PTR pIOContext = pSocketContext->NewIOContext(OverlappedOpType::Remove);
+        //BOOL bSuccess = g_lpfnDisconnectEx(pIOContext->opSocket, &pIOContext->overlapped, 0, 0);
+        //if (!bSuccess)
+        //{
+        //    int err = WSAGetLastError();
+        //    if (WSA_IO_PENDING != err)
+        //    {
+        //        OnError(pConnection, err);
+        //    }
+        //}
+        delete pSocketContext;
     }
     return;
 }

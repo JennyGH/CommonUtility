@@ -18,8 +18,10 @@ struct IOCPSettings
 
 class IOCP
 {
+public:
+    static std::string      GetErrorMessage(INT32 errcode);
 private:
-    static unsigned WINAPI _WorkerThread(HANDLE hHandle);
+    static unsigned WINAPI  _WorkerThread(HANDLE hHandle);
 private:
     BOOL _DoAccept(HANDLE hIOContext, DWORD dwBytes);
     BOOL _PostAccept();
@@ -49,7 +51,6 @@ protected:
 
 private:
     UINT32				                    m_nAF;
-    //UINT_PTR			                    m_socket;
     HANDLE                                  m_hListenSocketContext;
     UINT32				                    m_nProtocol;
     UINT32				                    m_nRecvBufferSize;

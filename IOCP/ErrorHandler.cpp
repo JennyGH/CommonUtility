@@ -20,13 +20,14 @@ default: \
 bool GetWSAErrorMessage(DWORD errcode, char buffer[], DWORD sizeOfBuffer)
 {
     LPVOID lpMsgBuf = NULL;
-    if (FormatMessageA(
+    DWORD dwBufferSize = FormatMessageA(
         FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_MAX_WIDTH_MASK,
         NULL,
         errcode,
         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
         (LPSTR)&lpMsgBuf, 0,
-        NULL))
+        NULL);
+    if (dwBufferSize > 0)
     {
         sprintf_s(buffer, sizeOfBuffer, "[WSAError] %s", lpMsgBuf);
         if (NULL != lpMsgBuf)

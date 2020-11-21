@@ -1,71 +1,255 @@
-﻿#include <stdio.h>
+﻿#include <time.h>
+#include <stdio.h>
 #include <stdarg.h>
+#include <map>
+#include <stack>
+#include <string>
 #include "Logger.h"
-#include "DateTime.h"
-#include "Configuration.h"
 
+// ========== Compatible ==========
 #if !defined(WIN32) && !defined(_WIN32)
 #ifndef vfprintf_s
-#define vfprintf_s vfprintf
+#define vfprintf_s                  vfprintf
 #endif // !vfprintf_s
+#ifndef sprintf_s
+#define sprintf_s(buffer, fmt, ...) sprintf(buffer, fmt, ##__VA_ARGS__)
+#endif // !sprintf_s
+static inline void assign_tm(struct tm* const from, struct tm* const to)
+{
+    if (NULL == from || NULL == to)
+    {
+        return;
+    }
+    to->tm_year = from->tm_year;
+    to->tm_mon = from->tm_mon;
+    to->tm_mday = from->tm_mday;
+    to->tm_wday = from->tm_wday;
+    to->tm_yday = from->tm_yday;
+    to->tm_hour = from->tm_hour;
+    to->tm_min = from->tm_min;
+    to->tm_sec = from->tm_sec;
+    to->tm_isdst = from->tm_isdst;
+}
+
+static inline int localtime_s(struct tm* const t, time_t const* time)
+{
+    if (NULL == time || NULL == t)
+    {
+        return 0;
+    }
+    assign_tm(localtime(time), t);
+    return 0;
+}
+
+static inline int gmtime_s(struct tm* const t, time_t const* time)
+{
+    if (NULL == time || NULL == t)
+    {
+        return 0;
+    }
+    assign_tm(gmtime(time), t);
+    return 0;
+}
 #endif
+// ================================
 
-Logger::Logger()
-    : m_pFile(NULL)
-#if defined(DEBUG) || defined(_DEBUG)
-    , m_nLevel(0)
-#else
-    , m_nLevel(CONFIGURATIONS.GetLogValue<int>("level", TEST_DEFAULT_CONFIG_LOG_LEVEL))
-#endif
+// ========== Inner functions ==========
+static std::string GetDateString(time_t tick)
 {
-#if !LOG_TO_CONSOLE
-    std::string logDir = CONFIGURATIONS.GetLogValue<std::string>("path", TEST_DEFAULT_CONFIG_LOG_PATH);
-    std::string logFileName = DateTime::Now().ToLongDateString() + ".log";
-    std::string logFilePath = logDir + "/" + logFileName;
-    printf("LOG LEVEL: %d \n", m_nLevel);
-    printf("LOG PATH:  %s \n", logFilePath.c_str());
-    if (!logFilePath.empty())
-    {
-        m_pFile = fopen(logFilePath.c_str(), "a");
-    }
-#endif // !LOG_TO_CONSOLE
+    tm temp;
+    localtime_s(&temp, &tick);
+    int year = temp.tm_year + 1900;
+    int month = temp.tm_mon + 1;
+    int day = temp.tm_mday;
+    char buffer[256] = { 0 };
+    sprintf_s(buffer, "%04d_%02d_%02d", year, month, day);
+    return buffer;
 }
 
-Logger & Logger::GetInstance()
+static std::string GetTimeString(time_t tick)
 {
-    static Logger* ptr = NULL;
-    if (NULL == ptr)
-    {
-        ptr = new Logger();
-    }
-    return *ptr;
+    tm temp;
+    localtime_s(&temp, &tick);
+    int hour = temp.tm_hour;
+    int minute = temp.tm_min;
+    int second = temp.tm_sec;
+    char buffer[256] = { 0 };
+    sprintf_s(buffer, "%02d:%02d:%02d", hour, minute, second);
+    return buffer;
 }
 
-Logger::~Logger()
+static std::string GetIdentation(int indentSize, const std::string& indentContent = " ")
 {
-#if !LOG_TO_CONSOLE
-    if (NULL != m_pFile)
+    std::string res;
+    for (int i = 0; i < indentSize; i++)
     {
-        fclose(m_pFile);
-        m_pFile = NULL;
+        res.append(indentContent);
     }
-#endif // !LOG_TO_CONSOLE
+    return res;
+}
+// =====================================
+
+struct Indentation
+{
+    std::string group;
+    std::string ident;
+};
+
+class LoggerImplement
+{
+    LoggerImplement()
+        : m_pFile(NULL)
+        , m_nLevel(0)
+        , m_nIndentSize(4)
+        , m_indentContent(" ")
+    {
+        //m_pFile = fopen(NULL, "a");
+    }
+public:
+    static LoggerImplement& GetInstance()
+    {
+        static LoggerImplement* ptr = NULL;
+        if (NULL == ptr)
+        {
+            ptr = new LoggerImplement();
+        }
+        return *ptr;
+    }
+
+    void Close()
+    {
+        if (NULL != m_pFile)
+        {
+            fclose(m_pFile);
+            m_pFile = NULL;
+        }
+    }
+
+    void EnterGroup(const std::string& group)
+    {
+        Indentation indentation;
+        indentation.group = group;
+        indentation.ident = (this->m_indents.empty() ? "" : this->m_indents.top().ident) + GetIdentation(m_nIndentSize, m_indentContent);
+        this->m_indents.push(indentation);
+    }
+    void LeaveGroup()
+    {
+        this->m_indents.pop();
+    }
+    std::string GetCurrentIndent()
+    {
+        if (this->m_indents.empty())
+        {
+            return "";
+        }
+        return this->m_indents.top().ident;
+    }
+    std::string GetCurrentGroup()
+    {
+        std::string group;
+        if (!this->m_indents.empty())
+        {
+            group = this->m_indents.top().group;
+        }
+        return group;
+    }
+
+    ~LoggerImplement()
+    {
+        this->Close();
+    }
+
+public:
+    FILE* m_pFile;
+    int                       m_nLevel;
+    int                       m_nIndentSize;
+    std::string               m_indentContent;
+    std::stack<Indentation>   m_indents;
+};
+
+int easy_logger_initialize(int level, FILE* pFile)
+{
+    if (NULL == pFile)
+    {
+        return EASY_LOGGER_ERROR_INVALID_ARGUMENT;
+    }
+    LoggerImplement::GetInstance().m_nLevel = level;
+    LoggerImplement::GetInstance().m_pFile = pFile;
+
+    return EASY_LOGGER_SUCCESS;
 }
 
-void Logger::WriteLog(int level, const char * format, ...)
+//int easy_logger_initialize(int level, const char* path)
+//{
+//    if (NULL == path || strlen(path) == 0)
+//    {
+//        return EASY_LOGGER_ERROR_INVALID_ARGUMENT;
+//    }
+//
+//    FILE* pFile = fopen(path, "a");
+//
+//    if (NULL == pFile)
+//    {
+//        return EASY_LOGGER_ERROR_NO_ACCESS_RIGHT;
+//    }
+//
+//    LoggerImplement::GetInstance().m_pFile = pFile;
+//
+//    return EASY_LOGGER_SUCCESS;
+//}
+
+int easy_logger_set_indent_size(int size)
 {
+    LoggerImplement::GetInstance().m_nIndentSize = size;
+    return EASY_LOGGER_SUCCESS;
+}
+
+int easy_logger_set_indent_content(const char* content)
+{
+    if (NULL == content)
+    {
+        return EASY_LOGGER_ERROR_INVALID_ARGUMENT;
+    }
+    LoggerImplement::GetInstance().m_indentContent = content;
+    return EASY_LOGGER_SUCCESS;
+}
+
+int easy_logger_enter_group(const char* group)
+{
+    if (NULL == group || strlen(group) == 0)
+    {
+        return EASY_LOGGER_ERROR_INVALID_ARGUMENT;
+    }
+    easy_logger_write_log(LOG_LEVEL_TRACE, ">>>>> %s", group);
+    LoggerImplement::GetInstance().EnterGroup(group);
+    return EASY_LOGGER_SUCCESS;
+}
+
+int easy_logger_leave_group()
+{
+    std::string group = LoggerImplement::GetInstance().GetCurrentGroup();
+    LoggerImplement::GetInstance().LeaveGroup();
+    easy_logger_write_log(LOG_LEVEL_TRACE, "<<<<< %s", group.c_str());
+    return EASY_LOGGER_SUCCESS;
+}
+
+int easy_logger_write_log(int level, const char* format, ...)
+{
+    FILE* pFile = LoggerImplement::GetInstance().m_pFile;
+    int   nLevel = LoggerImplement::GetInstance().m_nLevel;
+
     if (NULL == format)
     {
-        return;
+        return EASY_LOGGER_ERROR_INVALID_ARGUMENT;
     }
 
-    if (level < m_nLevel)
+    if (level < nLevel)
     {
-        return;
+        return EASY_LOGGER_SUCCESS;
     }
 
     std::string fmt;
-    fmt.append(DateTime::Now().ToLongTimeString());
+    fmt.append(GetTimeString(time(NULL)));
     switch (level)
     {
     case LOG_LEVEL_TRACE: {
@@ -87,31 +271,25 @@ void Logger::WriteLog(int level, const char * format, ...)
     default:
         break;
     }
+    fmt.append(LoggerImplement::GetInstance().GetCurrentIndent());
     fmt.append(format);
     fmt.append("\n");
     format = fmt.c_str();
 
     va_list args;
     va_start(args, format);
-#if LOG_TO_CONSOLE
-    vprintf_s(format, args);
-#else
-    if (NULL != m_pFile)
+    if (NULL != pFile)
     {
-        vfprintf_s(m_pFile, format, args);
-        fflush(m_pFile);
+        vfprintf_s(pFile, format, args);
+        fflush(pFile);
     }
-#endif // LOG_TO_CONSOLE
     va_end(args);
+
+    return EASY_LOGGER_SUCCESS;
 }
 
-__FunctionTracer__::__FunctionTracer__(const std::string& func) :
-    m_func(func)
+int easy_logger_close()
 {
-    Logger::GetInstance().WriteLog(LOG_LEVEL_TRACE, ">>>>>> %s", m_func.c_str());
-}
-
-__FunctionTracer__::~__FunctionTracer__()
-{
-    Logger::GetInstance().WriteLog(LOG_LEVEL_TRACE, "<<<<<< %s", m_func.c_str());
+    LoggerImplement::GetInstance().Close();
+    return EASY_LOGGER_SUCCESS;
 }

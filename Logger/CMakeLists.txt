@@ -1,20 +1,28 @@
-PROJECT(CommonUtility)
+PROJECT(Logger)
 
 FILE(GLOB_RECURSE all_files
-        ${CMAKE_CURRENT_SOURCE_DIR}/*.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/*.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
+    ${CMAKE_SOURCE_DIR}/Thread/ConditionVariant.cpp
+)
 
 FILE(GLOB_RECURSE include_files
-        ${CMAKE_CURRENT_SOURCE_DIR}/*.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp
+)
 
 FILE(GLOB_RECURSE src_files 
-        ${CMAKE_CURRENT_SOURCE_DIR}/*.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
+)
 
 SOURCE_GROUP("Header Files" FILES "${include_files}")
 SOURCE_GROUP("Source Files" FILES "${src_files}")
+
+INCLUDE_DIRECTORIES(
+    ${CMAKE_SOURCE_DIR}/Thread
+)
 
 ADD_EXECUTABLE(Logger ${all_files})

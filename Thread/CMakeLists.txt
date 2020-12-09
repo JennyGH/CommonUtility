@@ -1,4 +1,4 @@
-PROJECT(CommonUtility)
+PROJECT(Thread)
 
 FILE(GLOB_RECURSE all_files
         ${CMAKE_CURRENT_SOURCE_DIR}/*.h

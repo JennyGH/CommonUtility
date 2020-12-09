@@ -7,42 +7,12 @@
 #ifndef sprintf_s
 #define sprintf_s(buffer, fmt, ...) sprintf(buffer, fmt, ##__VA_ARGS__)
 #endif // !sprintf_s
-static inline void assign_tm(struct tm* const from, struct tm* const to)
-{
-	if (NULL == from || NULL == to)
-	{
-		return;
-	}
-	to->tm_year = from->tm_year;
-	to->tm_mon = from->tm_mon;
-	to->tm_mday = from->tm_mday;
-	to->tm_wday = from->tm_wday;
-	to->tm_yday = from->tm_yday;
-	to->tm_hour = from->tm_hour;
-	to->tm_min = from->tm_min;
-	to->tm_sec = from->tm_sec;
-	to->tm_isdst = from->tm_isdst;
-}
-
-static inline int localtime_s(struct tm* const t, time_t const* time)
-{
-	if (NULL == time || NULL == t)
-	{
-		return 0;
-	}
-	assign_tm(localtime(time), t);
-	return 0;
-}
-
-static inline int gmtime_s(struct tm* const t, time_t const* time)
-{
-	if (NULL == time || NULL == t)
-	{
-		return 0;
-	}
-	assign_tm(gmtime(time), t);
-	return 0;
-}
+#ifndef localtime_s
+#define localtime_s(_Tm, _Time)     localtime_r((_Time), (_Tm))
+#endif // !localtime_s
+#ifndef gmtime_s
+#define gmtime_s(_Tm, _Time)        gmtime_r((_Time), (_Tm))
+#endif // !gmtime_s
 #endif // !WIN32
 
 

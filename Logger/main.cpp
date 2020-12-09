@@ -1,24 +1,33 @@
 ﻿#include "Logger.h"
 #include <string>
-
+#include <Windows.h>
+#include <mutex>
+#include <condition_variable>
 class __CallStackTracer__
 {
 public:
     __CallStackTracer__(const std::string& functionName);
     ~__CallStackTracer__();
+private:
+    std::string m_functionName;
 };
 
-__CallStackTracer__::__CallStackTracer__(const std::string& functionName)
+__CallStackTracer__::__CallStackTracer__(const std::string& functionName) : m_functionName(functionName)
 {
-    easy_logger_enter_group(functionName.c_str());
+    LOG_TRACE(">>>>> %s", m_functionName.c_str());
 }
 
 __CallStackTracer__::~__CallStackTracer__()
 {
-    easy_logger_leave_group();
+    LOG_TRACE("<<<<< %s", m_functionName.c_str());
 }
 
+#ifdef __PRETTY_FUNCTION__
+#define TRACE __CallStackTracer__ __trace__(__PRETTY_FUNCTION__)
+#else
 #define TRACE __CallStackTracer__ __trace__(__FUNCTION__)
+#endif // __PRETTY_FUNCTION__
+
 
 static void test_function_1()
 {
@@ -39,11 +48,16 @@ static void test_function_2()
 
 int main(int argc, char* argv[])
 {
+
+    //std::mutex mutex;
+    //std::unique_lock<std::mutex> lock(mutex);
+    //std::condition_variable condition;
+    //condition.wait(lock, []() -> bool {});
+
     int rv = 0;
-    rv = easy_logger_initialize(LOG_LEVEL_DEBUG, stdout);
-    rv = easy_logger_set_indent_size(4);
-    rv = easy_logger_set_indent_content("-");
-    test_function_1();
+    FILE* pFile = stdout;//_fsopen(".\\logger_test.log", "a", _SH_DENYWR);
+    easy_logger_initialize("$stdout", LOG_LEVEL_TRACE);
     test_function_2();
+    //easy_logger_end();
     return 0;
 }

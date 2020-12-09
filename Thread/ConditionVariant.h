@@ -24,24 +24,23 @@
 #endif // !LeaveCriticalSection
 #endif // defined(WIN32)||defined(_WIN32)
 
-typedef bool(*ConditionCallback)(void* context);
+typedef bool(*PredicateCallback)(void* context);
 
 class ConditionVariant
 {
 public:
-	ConditionVariant(CRITICAL_SECTION & mutex);
-	~ConditionVariant();
+    ConditionVariant();
+    ~ConditionVariant();
 
-	void Wait(ConditionCallback callback, void* context);
+    void Wait(CRITICAL_SECTION * criticalSection, PredicateCallback callback, void* context);
 
-	void Notify();
+    void Notify();
 
 private:
-	CRITICAL_SECTION& m_mutex;
 #if defined(WIN32) || defined(_WIN32)
-	HANDLE            m_event;
+    CONDITION_VARIABLE    m_cond;
 #else
-	pthread_cond_t    m_event;
+    pthread_cond_t        m_cond;
 #endif // defined(WIN32)||defined(_WIN32)
 
 };

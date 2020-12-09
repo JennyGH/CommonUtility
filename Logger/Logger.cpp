@@ -1,109 +1,125 @@
 ﻿#include <time.h>
 #include <stdio.h>
+#include <string.h>
 #include <stdarg.h>
-#include <map>
-#include <stack>
+#include <deque>
 #include <string>
 #include "Logger.h"
+#include "ConditionVariant.h"
+
+#define USE_MULTI_THREAD 1
 
 // ========== Compatible ==========
-#if !defined(WIN32) && !defined(_WIN32)
+#if defined(WIN32) || defined(_WIN32)
+#include <Windows.h>
+#include <process.h>
+#else
+#include <pthread.h>
 #ifndef vfprintf_s
 #define vfprintf_s                  vfprintf
 #endif // !vfprintf_s
 #ifndef sprintf_s
 #define sprintf_s(buffer, fmt, ...) sprintf(buffer, fmt, ##__VA_ARGS__)
 #endif // !sprintf_s
-static inline void assign_tm(struct tm* const from, struct tm* const to)
-{
-    if (NULL == from || NULL == to)
-    {
-        return;
-    }
-    to->tm_year = from->tm_year;
-    to->tm_mon = from->tm_mon;
-    to->tm_mday = from->tm_mday;
-    to->tm_wday = from->tm_wday;
-    to->tm_yday = from->tm_yday;
-    to->tm_hour = from->tm_hour;
-    to->tm_min = from->tm_min;
-    to->tm_sec = from->tm_sec;
-    to->tm_isdst = from->tm_isdst;
-}
-
-static inline int localtime_s(struct tm* const t, time_t const* time)
-{
-    if (NULL == time || NULL == t)
-    {
-        return 0;
-    }
-    assign_tm(localtime(time), t);
-    return 0;
-}
-
-static inline int gmtime_s(struct tm* const t, time_t const* time)
-{
-    if (NULL == time || NULL == t)
-    {
-        return 0;
-    }
-    assign_tm(gmtime(time), t);
-    return 0;
-}
+#ifndef GetCurrentThreadId
+#define GetCurrentThreadId          pthread_self
+#endif // !GetCurrentThreadId
+#ifndef localtime_s
+#define localtime_s(_Tm, _Time)     localtime_r((_Time), (_Tm))
+#endif // !localtime_s
+#ifndef gmtime_s
+#define gmtime_s(_Tm, _Time)        gmtime_r((_Time), (_Tm))
+#endif // !gmtime_s
 #endif
 // ================================
 
-// ========== Inner functions ==========
-static std::string GetDateString(time_t tick)
+static FILE* _OpenFile(const char* path, const char* mode)
 {
-    tm temp;
-    localtime_s(&temp, &tick);
-    int year = temp.tm_year + 1900;
-    int month = temp.tm_mon + 1;
-    int day = temp.tm_mday;
-    char buffer[256] = { 0 };
-    sprintf_s(buffer, "%04d_%02d_%02d", year, month, day);
-    return buffer;
+#ifdef WIN32
+    return  _fsopen(path, mode, _SH_DENYWR);
+#else
+    return fopen(path, mode);
+#endif // WIN32
 }
 
-static std::string GetTimeString(time_t tick)
+class ScopeLock
 {
-    tm temp;
-    localtime_s(&temp, &tick);
-    int hour = temp.tm_hour;
-    int minute = temp.tm_min;
-    int second = temp.tm_sec;
-    char buffer[256] = { 0 };
-    sprintf_s(buffer, "%02d:%02d:%02d", hour, minute, second);
-    return buffer;
-}
-
-static std::string GetIdentation(int indentSize, const std::string& indentContent = " ")
-{
-    std::string res;
-    for (int i = 0; i < indentSize; i++)
+public:
+    ScopeLock(CRITICAL_SECTION& cs)
+        : m_criticalSection(cs)
     {
-        res.append(indentContent);
+        ::EnterCriticalSection(&m_criticalSection);
     }
-    return res;
-}
-// =====================================
-
-struct Indentation
-{
-    std::string group;
-    std::string ident;
+    ~ScopeLock()
+    {
+        ::LeaveCriticalSection(&m_criticalSection);
+    }
+private:
+    CRITICAL_SECTION& m_criticalSection;
 };
 
+typedef std::deque<std::string> LogQueue;
 class LoggerImplement
 {
     LoggerImplement()
         : m_pFile(NULL)
         , m_nLevel(0)
-        , m_nIndentSize(4)
-        , m_indentContent(" ")
+        , m_bIsLocalFile(true)
+        , m_bStop(false)
+        , m_hThread(0)
     {
-        //m_pFile = fopen(NULL, "a");
+        ::InitializeCriticalSection(&m_mutex);
+#if USE_MULTI_THREAD
+#if defined WIN32
+        m_hThread = (HANDLE)::_beginthreadex(NULL, 0, _WorkThread, this, 0, NULL);
+#else
+        typedef void*(*thread_function_t)(void*);
+        // 线程 1: 获取随机数
+        pthread_create(&m_hThread, NULL, (thread_function_t)_WorkThread, this);
+        // 线程 2: 对称加解密运算
+        pthread_detach(m_hThread);
+#endif // defined WIN32
+#endif // USE_MULTI_THREAD
+    }
+private:
+    static bool _HasLogContent(void* context)
+    {
+        LoggerImplement* logger = static_cast<LoggerImplement*>(context);
+        return NULL != logger && (logger->m_bStop || !logger->m_logContents.empty());
+    }
+#if WIN32
+    static unsigned int __stdcall _WorkThread(HANDLE arg)
+#else
+    static void* _WorkThread(void* arg)
+#endif // WIN32
+    {
+        LoggerImplement* logger = static_cast<LoggerImplement*>(arg);
+        bool isStop = false;
+        while (!isStop)
+        {
+            LogQueue queue;
+            {
+                ScopeLock lock(logger->m_mutex);
+                logger->m_conditionVariant.Wait(&logger->m_mutex, _HasLogContent, arg);
+                logger->m_logContents.swap(queue);
+                isStop = logger->m_bStop;
+            }
+
+            while (!queue.empty())
+            {
+                std::string& content = queue.front();
+                if (NULL != logger->m_pFile)
+                {
+                    ::fwrite(content.c_str(), 1, content.length(), logger->m_pFile);
+                }
+                queue.pop_front();
+            }
+            if (NULL != logger->m_pFile)
+            {
+                ::fflush(logger->m_pFile);
+            }
+        }
+        return 0;
     }
 public:
     static LoggerImplement& GetInstance()
@@ -116,140 +132,162 @@ public:
         return *ptr;
     }
 
-    void Close()
+    void SetFile(FILE* file, bool isStdOut = false)
     {
-        if (NULL != m_pFile)
+        this->m_pFile = file;
+        this->m_bIsLocalFile = !isStdOut;
+    }
+    FILE* GetFile() const
+    {
+        return this->m_pFile;
+    }
+
+    void SetLevel(int level)
+    {
+        this->m_nLevel = level;
+    }
+
+    int GetLevel() const
+    {
+        return this->m_nLevel;
+    }
+
+    void SubmitLogContent(const std::string& content)
+    {
+#if USE_MULTI_THREAD
         {
-            fclose(m_pFile);
+            ScopeLock lock(m_mutex);
+            m_logContents.push_back(content);
+        }
+        m_conditionVariant.Notify();
+#else
+        {
+            ScopeLock lock(m_mutex);
+            if (NULL != m_pFile)
+            {
+                ::fwrite(content.c_str(), 1, content.length(), m_pFile);
+                ::fflush(m_pFile);
+            }
+        }
+#endif USE_MULTI_THREAD
+    }
+
+    void Stop()
+    {
+#if USE_MULTI_THREAD
+        if (!IsStop())
+        {
+            {
+                ScopeLock lock(m_mutex);
+                this->m_bStop = true;
+            }
+            m_conditionVariant.Notify();
+#if WIN32
+            if (WAIT_OBJECT_0 == ::WaitForSingleObject(m_hThread, INFINITE))
+            {
+                ::CloseHandle(m_hThread);
+            }
+#else
+            pthread_join(m_hThread);
+#endif // WIN32
+        }
+#endif // USE_MULTI_THREAD
+        if (m_bIsLocalFile && NULL != m_pFile)
+        {
+            ::fclose(m_pFile);
             m_pFile = NULL;
         }
     }
 
-    void EnterGroup(const std::string& group)
+    bool IsStop()
     {
-        Indentation indentation;
-        indentation.group = group;
-        indentation.ident = (this->m_indents.empty() ? "" : this->m_indents.top().ident) + GetIdentation(m_nIndentSize, m_indentContent);
-        this->m_indents.push(indentation);
-    }
-    void LeaveGroup()
-    {
-        this->m_indents.pop();
-    }
-    std::string GetCurrentIndent()
-    {
-        if (this->m_indents.empty())
-        {
-            return "";
-        }
-        return this->m_indents.top().ident;
-    }
-    std::string GetCurrentGroup()
-    {
-        std::string group;
-        if (!this->m_indents.empty())
-        {
-            group = this->m_indents.top().group;
-        }
-        return group;
+        ScopeLock lock(m_mutex);
+        return this->m_bStop;
     }
 
     ~LoggerImplement()
     {
-        this->Close();
+        Stop();
+        ::DeleteCriticalSection(&m_mutex);
     }
 
-public:
-    FILE* m_pFile;
-    int                       m_nLevel;
-    int                       m_nIndentSize;
-    std::string               m_indentContent;
-    std::stack<Indentation>   m_indents;
+private:
+    FILE*                       m_pFile;
+    int                         m_nLevel;
+    bool                        m_bIsLocalFile;
+    bool                        m_bStop;
+    CRITICAL_SECTION            m_mutex;
+    ConditionVariant            m_conditionVariant;
+    LogQueue                    m_logContents;
+#if WIN32
+    HANDLE                      m_hThread;
+#else
+    pthread_t                   m_hThread;
+#endif // WIN32
 };
 
-int easy_logger_initialize(int level, FILE* pFile)
+void easy_logger_initialize(const char* path, int level)
 {
-    if (NULL == pFile)
+    LoggerImplement& logger = LoggerImplement::GetInstance();
+    if (NULL != path && strlen(path) > 0)
     {
-        return EASY_LOGGER_ERROR_INVALID_ARGUMENT;
+        if (strcmp(path, "$stdout") == 0 || strcmp(path, "$STDOUT") == 0)
+        {
+            LoggerImplement::GetInstance().SetFile(stdout, true);
+        }
+        else
+        {
+            LoggerImplement::GetInstance().SetFile(_OpenFile(path, "a+"));
+        }
     }
-    LoggerImplement::GetInstance().m_nLevel = level;
-    LoggerImplement::GetInstance().m_pFile = pFile;
-
-    return EASY_LOGGER_SUCCESS;
-}
-
-//int easy_logger_initialize(int level, const char* path)
-//{
-//    if (NULL == path || strlen(path) == 0)
-//    {
-//        return EASY_LOGGER_ERROR_INVALID_ARGUMENT;
-//    }
-//
-//    FILE* pFile = fopen(path, "a");
-//
-//    if (NULL == pFile)
-//    {
-//        return EASY_LOGGER_ERROR_NO_ACCESS_RIGHT;
-//    }
-//
-//    LoggerImplement::GetInstance().m_pFile = pFile;
-//
-//    return EASY_LOGGER_SUCCESS;
-//}
-
-int easy_logger_set_indent_size(int size)
-{
-    LoggerImplement::GetInstance().m_nIndentSize = size;
-    return EASY_LOGGER_SUCCESS;
-}
-
-int easy_logger_set_indent_content(const char* content)
-{
-    if (NULL == content)
-    {
-        return EASY_LOGGER_ERROR_INVALID_ARGUMENT;
-    }
-    LoggerImplement::GetInstance().m_indentContent = content;
-    return EASY_LOGGER_SUCCESS;
-}
-
-int easy_logger_enter_group(const char* group)
-{
-    if (NULL == group || strlen(group) == 0)
-    {
-        return EASY_LOGGER_ERROR_INVALID_ARGUMENT;
-    }
-    easy_logger_write_log(LOG_LEVEL_TRACE, ">>>>> %s", group);
-    LoggerImplement::GetInstance().EnterGroup(group);
-    return EASY_LOGGER_SUCCESS;
-}
-
-int easy_logger_leave_group()
-{
-    std::string group = LoggerImplement::GetInstance().GetCurrentGroup();
-    LoggerImplement::GetInstance().LeaveGroup();
-    easy_logger_write_log(LOG_LEVEL_TRACE, "<<<<< %s", group.c_str());
-    return EASY_LOGGER_SUCCESS;
+    LoggerImplement::GetInstance().SetLevel(level);
 }
 
 int easy_logger_write_log(int level, const char* format, ...)
 {
-    FILE* pFile = LoggerImplement::GetInstance().m_pFile;
-    int   nLevel = LoggerImplement::GetInstance().m_nLevel;
+    int bufferSize = 0;
+    FILE* pFile = LoggerImplement::GetInstance().GetFile();
+    int   nLevel = LoggerImplement::GetInstance().GetLevel();
 
-    if (NULL == format)
+    if (NULL == pFile)
     {
-        return EASY_LOGGER_ERROR_INVALID_ARGUMENT;
+        return bufferSize;
     }
 
     if (level < nLevel)
     {
-        return EASY_LOGGER_SUCCESS;
+        return bufferSize;
+    }
+
+    if (NULL == format)
+    {
+        return bufferSize;
     }
 
     std::string fmt;
-    fmt.append(GetTimeString(time(NULL)));
+
+    // Get current thread id.
+    {
+        char tid[32] = { 0 };
+        sprintf_s(tid, "%ld ", GetCurrentThreadId());
+        fmt.append(tid);
+    }
+
+    // Generate date time string.
+    {
+        tm temp;
+        time_t tick = time(NULL);
+        localtime_s(&temp, &tick);
+        char dataTime[32] = { 0 };
+        sprintf_s(
+            dataTime,
+            "%04d%02d%02d%02d%02d%02d",
+            temp.tm_year + 1900, temp.tm_mon + 1, temp.tm_mday, temp.tm_hour, temp.tm_min, temp.tm_sec
+        );
+        fmt.append(dataTime);
+
+    }
+
     switch (level)
     {
     case LOG_LEVEL_TRACE: {
@@ -271,7 +309,6 @@ int easy_logger_write_log(int level, const char* format, ...)
     default:
         break;
     }
-    fmt.append(LoggerImplement::GetInstance().GetCurrentIndent());
     fmt.append(format);
     fmt.append("\n");
     format = fmt.c_str();
@@ -280,16 +317,22 @@ int easy_logger_write_log(int level, const char* format, ...)
     va_start(args, format);
     if (NULL != pFile)
     {
-        vfprintf_s(pFile, format, args);
-        fflush(pFile);
+        bufferSize = vsnprintf(NULL, 0, format, args) + 1;
+        char* buffer = new char[bufferSize]();
+        if (NULL == buffer)
+        {
+            return 0;
+        }
+        vsprintf_s(buffer, bufferSize, format, args);
+        LoggerImplement::GetInstance().SubmitLogContent(buffer);
+        delete[] buffer;
     }
     va_end(args);
 
-    return EASY_LOGGER_SUCCESS;
+    return bufferSize;
 }
 
-int easy_logger_close()
+void easy_logger_end()
 {
-    LoggerImplement::GetInstance().Close();
-    return EASY_LOGGER_SUCCESS;
+    LoggerImplement::GetInstance().Stop();
 }

@@ -68,8 +68,8 @@ void* operator new  (std::size_t size, const char* file, int line);
 void* operator new[](std::size_t size, const char* file, int line);
 void* operator new  (std::size_t size, void* where, const char* file, int line);
 void* operator new[](std::size_t size, void* where, const char* file, int line);
-void  operator delete  (void* ptr);
-void  operator delete[](void* ptr);
+void  operator delete  (void* ptr) throw();
+void  operator delete[](void* ptr) throw();
 
 #ifdef DEBUG_NEW
 #undef DEBUG_NEW

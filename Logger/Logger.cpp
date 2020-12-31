@@ -7,7 +7,67 @@
 #include "Logger.h"
 #include "ConditionVariant.h"
 
+static char GetHex(int val, bool upperCase = false)
+{
+    if (0 <= val && val <= 9)
+    {
+        return '0' + val;
+    }
+    else if (10 <= val && val <= 15)
+    {
+        if (upperCase)
+        {
+            return 'A' + (val - 10);
+        }
+        else
+        {
+            return 'a' + (val - 10);
+        }
+    }
+    return 0;
+}
+
+static unsigned char GetByte(char c)
+{
+    if ('0' <= c && c <= '9')
+    {
+        return c - '0';
+    }
+    else if ('a' <= c && c <= 'f')
+    {
+        return c - 'a' + 10;
+    }
+    else if ('A' <= c && c <= 'F')
+    {
+        return c - 'A' + 10;
+    }
+    return 0x00;
+}
+
+std::string ToHex(const unsigned char src[], int len, bool upperCase)
+{
+    std::string res;
+    if (NULL == src || len <= 0)
+    {
+        return res;
+    }
+
+    for (int index = 0; index < len; index++)
+    {
+        char c = src[index];
+        char buffer[2] = { 0 };
+        buffer[0] = GetHex((c >> 4) & 0x0f);
+        buffer[1] = GetHex((c >> 0) & 0x0f);
+        res.append(buffer, 2);
+    }
+
+    return res;
+}
+
+// Enable write log work thread by default.
+#ifndef USE_MULTI_THREAD
 #define USE_MULTI_THREAD 1
+#endif // !USE_MULTI_THREAD
 
 // ========== Compatible ==========
 #if defined(WIN32) || defined(_WIN32)
@@ -15,20 +75,27 @@
 #include <process.h>
 #else
 #include <pthread.h>
+#include <semaphore.h>
+#ifndef stricmp
+#define stricmp                             strcasecmp
+#endif // !stricmp
 #ifndef vfprintf_s
-#define vfprintf_s                  vfprintf
+#define vfprintf_s                          vfprintf
 #endif // !vfprintf_s
+#ifndef vsprintf_s
+#define vsprintf_s(dst, dstSize, fmt, args) vsprintf(dst, fmt, args)
+#endif // !vsprintf_s
 #ifndef sprintf_s
-#define sprintf_s(buffer, fmt, ...) sprintf(buffer, fmt, ##__VA_ARGS__)
+#define sprintf_s(buffer, fmt, ...)         sprintf(buffer, fmt, ##__VA_ARGS__)
 #endif // !sprintf_s
 #ifndef GetCurrentThreadId
-#define GetCurrentThreadId          pthread_self
+#define GetCurrentThreadId                  pthread_self
 #endif // !GetCurrentThreadId
 #ifndef localtime_s
-#define localtime_s(_Tm, _Time)     localtime_r((_Time), (_Tm))
+#define localtime_s(_Tm, _Time)             localtime_r((_Time), (_Tm))
 #endif // !localtime_s
 #ifndef gmtime_s
-#define gmtime_s(_Tm, _Time)        gmtime_r((_Time), (_Tm))
+#define gmtime_s(_Tm, _Time)                gmtime_r((_Time), (_Tm))
 #endif // !gmtime_s
 #endif
 // ================================
@@ -73,6 +140,7 @@ class LoggerImplement
 #if defined WIN32
         m_hThread = (HANDLE)::_beginthreadex(NULL, 0, _WorkThread, this, 0, NULL);
 #else
+        ::sem_init(&m_hSemaphore, 0, 0);
         typedef void*(*thread_function_t)(void*);
         // 线程 1: 获取随机数
         pthread_create(&m_hThread, NULL, (thread_function_t)_WorkThread, this);
@@ -119,17 +187,16 @@ private:
                 ::fflush(logger->m_pFile);
             }
         }
+#if !WIN32
+        ::sem_post(&logger->m_hSemaphore);
+#endif // !WIN32
         return 0;
     }
 public:
     static LoggerImplement& GetInstance()
     {
-        static LoggerImplement* ptr = NULL;
-        if (NULL == ptr)
-        {
-            ptr = new LoggerImplement();
-        }
-        return *ptr;
+        static LoggerImplement logger;
+        return logger;
     }
 
     void SetFile(FILE* file, bool isStdOut = false)
@@ -188,7 +255,7 @@ public:
                 ::CloseHandle(m_hThread);
             }
 #else
-            pthread_join(m_hThread);
+            ::sem_wait(&m_hSemaphore);
 #endif // WIN32
         }
 #endif // USE_MULTI_THREAD
@@ -209,6 +276,9 @@ public:
     {
         Stop();
         ::DeleteCriticalSection(&m_mutex);
+#if !WIN32
+        ::sem_destroy(&m_hSemaphore);
+#endif // !WIN32
     }
 
 private:
@@ -223,6 +293,7 @@ private:
     HANDLE                      m_hThread;
 #else
     pthread_t                   m_hThread;
+    sem_t                       m_hSemaphore;
 #endif // WIN32
 };
 
@@ -231,7 +302,7 @@ void easy_logger_initialize(const char* path, int level)
     LoggerImplement& logger = LoggerImplement::GetInstance();
     if (NULL != path && strlen(path) > 0)
     {
-        if (strcmp(path, "$stdout") == 0 || strcmp(path, "$STDOUT") == 0)
+        if (stricmp(path, "$stdout") == 0)
         {
             LoggerImplement::GetInstance().SetFile(stdout, true);
         }
@@ -314,18 +385,34 @@ int easy_logger_write_log(int level, const char* format, ...)
     format = fmt.c_str();
 
     va_list args;
-    va_start(args, format);
     if (NULL != pFile)
     {
-        bufferSize = vsnprintf(NULL, 0, format, args) + 1;
-        char* buffer = new char[bufferSize]();
-        if (NULL == buffer)
+        char  buffer[1024] = { 0 };
+        bool  needToDelete = false;
+        char* ptr = buffer;
+
+        va_start(args, format);
+        bufferSize = vsnprintf(buffer, sizeof(buffer), format, args) + 1;
+
+        if (bufferSize > sizeof(buffer))
         {
-            return 0;
+            va_start(args, format);
+            ptr = new char[bufferSize]();
+            if (NULL == ptr)
+            {
+                return 0;
+            }
+            needToDelete = true;
+            vsprintf_s(ptr, bufferSize, format, args);
         }
-        vsprintf_s(buffer, bufferSize, format, args);
-        LoggerImplement::GetInstance().SubmitLogContent(buffer);
-        delete[] buffer;
+
+        LoggerImplement::GetInstance().SubmitLogContent(ptr);
+
+        if (needToDelete)
+        {
+            delete[] ptr;
+            ptr = NULL;
+        }
     }
     va_end(args);
 

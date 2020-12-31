@@ -19,4 +19,15 @@ FILE(GLOB_RECURSE src_files
 SOURCE_GROUP("Header Files" FILES "${include_files}")
 SOURCE_GROUP("Source Files" FILES "${src_files}")
 
-ADD_EXECUTABLE(DynamicLibraryLoader ${all_files})
+ADD_EXECUTABLE(${PROJECT_NAME} ${all_files})
+
+IF(UNIX)
+    SET(EX_LINK_LIBRARIES dl)
+ELSE(UNIX)
+    SET(EX_LINK_LIBRARIES )
+ENDIF(UNIX)
+
+TARGET_LINK_LIBRARIES(
+    ${PROJECT_NAME}
+    ${EX_LINK_LIBRARIES}
+)

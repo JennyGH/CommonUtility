@@ -43,7 +43,7 @@ public:
 #if OS_WINDOWS
         pFunction = (FunctionType)::GetProcAddress((HINSTANCE)m_hDLL, functionName.c_str());
 #else
-        pFunction = (FunctionType)::dlsym(hDLL, functionName.c_str());
+        pFunction = (FunctionType)::dlsym(m_hDLL, functionName.c_str());
 #endif // OS_WINDOWS
 
         if (nullptr == pFunction)

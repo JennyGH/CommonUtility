@@ -1,8 +1,11 @@
 ﻿#include "Logger.h"
 #include <string>
+#include <string.h>
+#if WIN32
 #include <Windows.h>
-#include <mutex>
-#include <condition_variable>
+#else
+#include <unistd.h>
+#endif // WIN32
 class __CallStackTracer__
 {
 public:
@@ -12,7 +15,8 @@ private:
     std::string m_functionName;
 };
 
-__CallStackTracer__::__CallStackTracer__(const std::string& functionName) : m_functionName(functionName)
+__CallStackTracer__::__CallStackTracer__(const std::string& functionName)
+    : m_functionName(functionName)
 {
     LOG_TRACE(">>>>> %s", m_functionName.c_str());
 }
@@ -20,40 +24,27 @@ __CallStackTracer__::__CallStackTracer__(const std::string& functionName) : m_fu
 __CallStackTracer__::~__CallStackTracer__()
 {
     LOG_TRACE("<<<<< %s", m_functionName.c_str());
+    //printf("<<<<< %s \n", m_functionName.c_str());
 }
 
-#ifdef __PRETTY_FUNCTION__
-#define TRACE __CallStackTracer__ __trace__(__PRETTY_FUNCTION__)
-#else
 #define TRACE __CallStackTracer__ __trace__(__FUNCTION__)
-#endif // __PRETTY_FUNCTION__
-
 
 static void test_function_1()
 {
     TRACE;
-    LOG_DEBUG("TEST!!!");
-    LOG_DEBUG("TEST!!!");
-    LOG_DEBUG("TEST!!!");
+    LOG_DEBUG("1");
 }
 
 static void test_function_2()
 {
     TRACE;
-    LOG_DEBUG("TEST!!!");
-    LOG_DEBUG("TEST!!!");
+    LOG_DEBUG("2");
     test_function_1();
-    LOG_DEBUG("TEST!!!");
+    LOG_DEBUG("3");
 }
 
 int main(int argc, char* argv[])
 {
-
-    //std::mutex mutex;
-    //std::unique_lock<std::mutex> lock(mutex);
-    //std::condition_variable condition;
-    //condition.wait(lock, []() -> bool {});
-
     int rv = 0;
     FILE* pFile = stdout;//_fsopen(".\\logger_test.log", "a", _SH_DENYWR);
     easy_logger_initialize("$stdout", LOG_LEVEL_TRACE);

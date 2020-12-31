@@ -237,13 +237,13 @@ void* operator new[](std::size_t size, void* where, const char* file, int line)
     return operator new(size, where, file, line);
 }
 
-void operator delete(void* ptr)
+void operator delete(void* ptr) throw()
 {
     MemoryLeakDetector::GetGlobalDetector().RemoveBlock(ptr);
     ::free(ptr);
 }
 
-void operator delete[](void* ptr)
+void operator delete[](void* ptr) throw()
 {
     operator delete(ptr);
 }

@@ -16,8 +16,8 @@ public:
     const char* getModuleName() const;
     const char* what() const;
 private:
-    std::string	m_moduleName;
-    std::string	m_message;
+    std::string    m_moduleName;
+    std::string    m_message;
 };
 
 static void _IsArgumentExist(const std::string& argumentName, const std::string& applicationName, _ArgumentMap& arguments)

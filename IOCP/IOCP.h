@@ -5,16 +5,16 @@
 
 struct IOCPSettings
 {
-    UINT32	af;
-    UINT32	protocol;
-    bool	isAcceptWithData;
-    int32_t	nCountOfThreads;
-    UINT32	nRecvBufferSize;
-    UINT32	nSendBufferSize;
+    UINT32    af;
+    UINT32    protocol;
+    bool    isAcceptWithData;
+    int32_t    nCountOfThreads;
+    UINT32    nRecvBufferSize;
+    UINT32    nSendBufferSize;
 };
-#define DEFAULT_SEND_BUFFER_SIZE	-1
-#define DEFAULT_RECV_BUFFER_SIZE	1024
-#define DEFAULT_IOCP_SETTINGS		{ AF_INET, 0, FALSE, -1, DEFAULT_RECV_BUFFER_SIZE, DEFAULT_SEND_BUFFER_SIZE }
+#define DEFAULT_SEND_BUFFER_SIZE    -1
+#define DEFAULT_RECV_BUFFER_SIZE    1024
+#define DEFAULT_IOCP_SETTINGS        { AF_INET, 0, FALSE, -1, DEFAULT_RECV_BUFFER_SIZE, DEFAULT_SEND_BUFFER_SIZE }
 
 class IOCP
 {
@@ -50,17 +50,17 @@ protected:
     // =======================================================
 
 private:
-    UINT32				                    m_nAF;
+    UINT32                                    m_nAF;
     HANDLE                                  m_hListenSocketContext;
-    UINT32				                    m_nProtocol;
-    UINT32				                    m_nRecvBufferSize;
-    UINT32				                    m_nSendBufferSize;
-    HANDLE				                    m_pAddress;
-    HANDLE				                    m_hCompletionPort;
-    HANDLE				                    m_hCriticalSection;
-    INT32				                    m_nCountOfThreads;
+    UINT32                                    m_nProtocol;
+    UINT32                                    m_nRecvBufferSize;
+    UINT32                                    m_nSendBufferSize;
+    HANDLE                                    m_pAddress;
+    HANDLE                                    m_hCompletionPort;
+    HANDLE                                    m_hCriticalSection;
+    INT32                                    m_nCountOfThreads;
     IConnectionFactory*                     m_pFactory;
-    bool				                    m_isAcceptWithData;
+    bool                                    m_isAcceptWithData;
     std::map<IConnectionBase*, HANDLE>      m_clientSocketContexts;
 };
 

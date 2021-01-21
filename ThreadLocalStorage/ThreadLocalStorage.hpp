@@ -11,55 +11,55 @@ template<typename T>
 class ThreadLocalStorage
 {
 public:
-	typedef unsigned long ThreadID;
-	typedef T ThreadData;
+    typedef unsigned long ThreadID;
+    typedef T ThreadData;
 private:
-	ThreadLocalStorage() {}
+    ThreadLocalStorage() {}
 public:
-	static ThreadLocalStorage& Instance()
-	{
-		static ThreadLocalStorage<T>* tls = nullptr;
-		if (nullptr == tls)
-		{
-			tls = new ThreadLocalStorage<T>();
-		}
-		return *tls;
-	}
+    static ThreadLocalStorage& Instance()
+    {
+        static ThreadLocalStorage<T>* tls = nullptr;
+        if (nullptr == tls)
+        {
+            tls = new ThreadLocalStorage<T>();
+        }
+        return *tls;
+    }
 
-	~ThreadLocalStorage()
-	{
-	}
+    ~ThreadLocalStorage()
+    {
+    }
 
-	ThreadData Store(const ThreadData& data)
-	{
-		return (m_storage[::GetCurrentThreadId()] = data);
-	}
+    ThreadData Store(const ThreadData& data)
+    {
+        return (m_storage[::GetCurrentThreadId()] = data);
+    }
 
-	ThreadData Get()
-	{
-		return m_storage[::GetCurrentThreadId()];
-	}
+    ThreadData Get()
+    {
+        return m_storage[::GetCurrentThreadId()];
+    }
 
-	ThreadData& Reference()
-	{
-		return m_storage[::GetCurrentThreadId()];
-	}
+    ThreadData& Reference()
+    {
+        return m_storage[::GetCurrentThreadId()];
+    }
 
-	const ThreadData& ConstReference()
-	{
-		return m_storage[::GetCurrentThreadId()];
-	}
+    const ThreadData& ConstReference()
+    {
+        return m_storage[::GetCurrentThreadId()];
+    }
 
-	operator ThreadData()
-	{
-		return Get();
-	}
+    operator ThreadData()
+    {
+        return Get();
+    }
 
-	std::size_t Size() const
-	{
-		return m_storage.size();
-	}
+    std::size_t Size() const
+    {
+        return m_storage.size();
+    }
 
 private:
-	std::map<ThreadID, ThreadData> m_storage;
+    std::map<ThreadID, ThreadData> m_storage;
 };

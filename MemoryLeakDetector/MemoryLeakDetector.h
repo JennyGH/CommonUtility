@@ -56,12 +56,12 @@ public:
     std::size_t GetLeakMemotySize() const;
 
 private:
-    CRITICAL_SECTION		m_mutex;
-    std::size_t		        m_nProcessId;
-    std::size_t		        m_nLeakMemorySize;
-    std::size_t		        m_nLeakBlockCount;
-    MemoryBlock*	        m_pHead;
-    MemoryBlock*	        m_pTail;
+    CRITICAL_SECTION        m_mutex;
+    std::size_t                m_nProcessId;
+    std::size_t                m_nLeakMemorySize;
+    std::size_t                m_nLeakBlockCount;
+    MemoryBlock*            m_pHead;
+    MemoryBlock*            m_pTail;
 };
 
 void* operator new  (std::size_t size, const char* file, int line);

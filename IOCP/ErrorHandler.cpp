@@ -5,16 +5,16 @@
 #define errcase(code, msg)\
 case code: \
 { \
-	memcpy_s(buffer, sizeOfBuffer, msg, strlen(msg)); \
-	break; \
+    memcpy_s(buffer, sizeOfBuffer, msg, strlen(msg)); \
+    break; \
 }
 
 #define defaultcase(msg)\
 default: \
 {\
-	if(!GetWSAErrorMessage(errcode, buffer, sizeOfBuffer))\
-		memcpy_s(buffer, sizeOfBuffer, msg, strlen(msg));\
-	break;\
+    if(!GetWSAErrorMessage(errcode, buffer, sizeOfBuffer))\
+        memcpy_s(buffer, sizeOfBuffer, msg, strlen(msg));\
+    break;\
 }
 
 bool GetWSAErrorMessage(DWORD errcode, char buffer[], DWORD sizeOfBuffer)

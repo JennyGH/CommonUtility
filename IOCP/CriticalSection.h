@@ -3,13 +3,13 @@
 class CriticalSection
 {
 public:
-	CriticalSection();
-	~CriticalSection();
+    CriticalSection();
+    ~CriticalSection();
 
-	void Lock();
-	void UnLock();
+    void Lock();
+    void UnLock();
 
 private:
-	CRITICAL_SECTION m_lock;
+    CRITICAL_SECTION m_lock;
 };
 

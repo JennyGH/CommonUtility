@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #define GetCurrentProcessId getpid
-#define GetCurrentThreadId	pthread_self
+#define GetCurrentThreadId    pthread_self
 #endif
 
 #define THREAD_LOCAL FALSE

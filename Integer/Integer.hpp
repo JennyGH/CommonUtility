@@ -2,19 +2,16 @@
 #include <string>
 #include <stdint.h>
 #include <stdio.h>
+#include <limits>
 
 #if !defined(WIN32) && !defined(_WIN32)
-
 #ifndef sprintf_s
 #define sprintf_s(buffer, bufferSize, format, ...) sprintf(buffer, format, ##__VA_ARGS__)
 #endif // !sprintf_s
-
 #ifndef sscanf_s
 #define sscanf_s(buffer, format, ...) sscanf(buffer, format, ##__VA_ARGS__)
 #endif // !sscanf_s
-
 #endif // !defined(WIN32) && !defined(_WIN32)
-
 
 template<typename T>
 struct _Default
@@ -25,9 +22,9 @@ struct _Default
 
 #define RETURN_FORMATED_STRING(bufferSize, format, val) \
 do{\
-	char _buffer[bufferSize] = { 0 };\
-	sprintf_s(_buffer, bufferSize, format, val);\
-	return _buffer;\
+    char _buffer[bufferSize] = { 0 };\
+    sprintf_s(_buffer, bufferSize, format, val);\
+    return _buffer;\
 } while (0)
 
 
@@ -37,9 +34,10 @@ static std::string ToString(type val) { RETURN_FORMATED_STRING(64, format, val);
 static type FromString(const std::string& src) { type val = type(0); sscanf_s(src.c_str(), format, &val); return val;  }\
 }
 
-DECLARE_DEFAULT(int16_t, "%d");
+DECLARE_DEFAULT(int16_t, "%hd");
 DECLARE_DEFAULT(int32_t, "%d");
-DECLARE_DEFAULT(int64_t, "%ld");
+DECLARE_DEFAULT(long, "%ld");
+DECLARE_DEFAULT(int64_t, "%lld");
 
 template<typename T> class Integer;
 typedef Integer<short> Short;
@@ -53,8 +51,8 @@ class Integer
     static T FromBytes(const unsigned char src[]);
     static T FromString(const char src[], const char fmt[]);
 public:
-    static const T Max = (1LL << (sizeof(T) * 8 - 1)) - 1;
-    static const T Min = (1LL << (sizeof(T) * 8 - 1)) + 1;
+    static const Integer<T> Max;
+    static const Integer<T> Min;
 public:
     Integer();
     Integer(T val);
@@ -67,6 +65,10 @@ public:
 private:
     T m_val;
 };
+template<typename T>
+const Integer<T> Integer<T>::Max = std::numeric_limits<T>::max(); //(1LL << (sizeof(T) * 8 - 1)) - 1;
+template<typename T>
+const Integer<T> Integer<T>::Min = std::numeric_limits<T>::min(); //(1LL << (sizeof(T) * 8 - 1)) + 1;
 
 template<typename T>
 inline T Integer<T>::FromBytes(const unsigned char src[])

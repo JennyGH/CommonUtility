@@ -6,29 +6,29 @@ class TimeSpan;
 
 enum DateTimeKind
 {
-    //��ʾ��ʱ���δָ��Ϊ����ʱ�䣬Ҳδָ��ΪЭ��ͨ��ʱ�� (UTC)��
+    //表示的时间既未指定为本地时间，也未指定为协调通用时间 (UTC)。
     Unspecified = 0,
-    //��ʾ��ʱ��Ϊ UTC��
+    //表示的时间为 UTC。
     Utc = 1,
-    //��ʾ��ʱ��Ϊ����ʱ�䡣
+    //表示的时间为本地时间。
     Local = 2
 };
 
 enum DayOfWeek
 {
-    //������
+    //星期日
     Sunday = 0,
-    //����һ
+    //星期一
     Monday = 1,
-    //���ڶ�
+    //星期二
     Tuesday = 2,
-    //������
+    //星期三
     Wednesday = 3,
-    //������
+    //星期四
     Thursday = 4,
-    //������
+    //星期五
     Friday = 5,
-    //������
+    //星期六
     Saturday = 6
 };
 

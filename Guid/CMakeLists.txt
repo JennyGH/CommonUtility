@@ -1,4 +1,4 @@
-PROJECT(CommonUtility)
+PROJECT(Guid)
 
 FILE(GLOB_RECURSE all_files
         ${CMAKE_CURRENT_SOURCE_DIR}/*.h
@@ -17,4 +17,15 @@ FILE(GLOB_RECURSE src_files
 SOURCE_GROUP("Header Files" FILES "${include_files}")
 SOURCE_GROUP("Source Files" FILES "${src_files}")
 
-ADD_EXECUTABLE(Guid ${all_files})
+ADD_EXECUTABLE(${PROJECT_NAME} ${all_files})
+
+IF(UNIX)
+    SET(EX_LINK_LIBRARIES ossp-uuid)
+ELSE(UNIX)
+    SET(EX_LINK_LIBRARIES )
+ENDIF(UNIX)
+
+TARGET_LINK_LIBRARIES(
+    ${PROJECT_NAME}
+    ${EX_LINK_LIBRARIES}
+)

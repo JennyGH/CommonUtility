@@ -7,63 +7,6 @@
 #include "Logger.h"
 #include "ConditionVariant.h"
 
-static char GetHex(int val, bool upperCase = false)
-{
-    if (0 <= val && val <= 9)
-    {
-        return '0' + val;
-    }
-    else if (10 <= val && val <= 15)
-    {
-        if (upperCase)
-        {
-            return 'A' + (val - 10);
-        }
-        else
-        {
-            return 'a' + (val - 10);
-        }
-    }
-    return 0;
-}
-
-static unsigned char GetByte(char c)
-{
-    if ('0' <= c && c <= '9')
-    {
-        return c - '0';
-    }
-    else if ('a' <= c && c <= 'f')
-    {
-        return c - 'a' + 10;
-    }
-    else if ('A' <= c && c <= 'F')
-    {
-        return c - 'A' + 10;
-    }
-    return 0x00;
-}
-
-std::string ToHex(const unsigned char src[], int len, bool upperCase)
-{
-    std::string res;
-    if (NULL == src || len <= 0)
-    {
-        return res;
-    }
-
-    for (int index = 0; index < len; index++)
-    {
-        char c = src[index];
-        char buffer[2] = { 0 };
-        buffer[0] = GetHex((c >> 4) & 0x0f);
-        buffer[1] = GetHex((c >> 0) & 0x0f);
-        res.append(buffer, 2);
-    }
-
-    return res;
-}
-
 // Enable write log work thread by default.
 #ifndef USE_MULTI_THREAD
 #define USE_MULTI_THREAD 1
@@ -77,25 +20,25 @@ std::string ToHex(const unsigned char src[], int len, bool upperCase)
 #include <pthread.h>
 #include <semaphore.h>
 #ifndef stricmp
-#define stricmp                             strcasecmp
+#define stricmp                                 strcasecmp
 #endif // !stricmp
 #ifndef vfprintf_s
-#define vfprintf_s                          vfprintf
+#define vfprintf_s                              vfprintf
 #endif // !vfprintf_s
 #ifndef vsprintf_s
-#define vsprintf_s(dst, dstSize, fmt, args) vsprintf(dst, fmt, args)
+#define vsprintf_s(dst, dstSize, fmt, args)     vsprintf(dst, fmt, args)
 #endif // !vsprintf_s
 #ifndef sprintf_s
-#define sprintf_s(buffer, fmt, ...)         sprintf(buffer, fmt, ##__VA_ARGS__)
+#define sprintf_s(buffer, bufferSize, fmt, ...) sprintf(buffer, fmt, ##__VA_ARGS__)
 #endif // !sprintf_s
 #ifndef GetCurrentThreadId
-#define GetCurrentThreadId                  pthread_self
+#define GetCurrentThreadId                      pthread_self
 #endif // !GetCurrentThreadId
 #ifndef localtime_s
-#define localtime_s(_Tm, _Time)             localtime_r((_Time), (_Tm))
+#define localtime_s(_Tm, _Time)                 localtime_r((_Time), (_Tm))
 #endif // !localtime_s
 #ifndef gmtime_s
-#define gmtime_s(_Tm, _Time)                gmtime_r((_Time), (_Tm))
+#define gmtime_s(_Tm, _Time)                    gmtime_r((_Time), (_Tm))
 #endif // !gmtime_s
 #endif
 // ================================
@@ -219,6 +162,11 @@ public:
         return this->m_nLevel;
     }
 
+    bool IsOutputToFile() const
+    {
+        return this->m_bIsLocalFile;
+    }
+
     void SubmitLogContent(const std::string& content)
     {
 #if USE_MULTI_THREAD
@@ -236,7 +184,7 @@ public:
                 ::fflush(m_pFile);
             }
         }
-#endif USE_MULTI_THREAD
+#endif // USE_MULTI_THREAD
     }
 
     void Stop()
@@ -339,8 +287,8 @@ int easy_logger_write_log(int level, const char* format, ...)
 
     // Get current thread id.
     {
-        char tid[32] = { 0 };
-        sprintf_s(tid, "%ld ", GetCurrentThreadId());
+        char tid[64] = { 0 };
+        sprintf_s(tid, sizeof(tid), "TID_0x%08lx ", GetCurrentThreadId());
         fmt.append(tid);
     }
 
@@ -352,6 +300,7 @@ int easy_logger_write_log(int level, const char* format, ...)
         char dataTime[32] = { 0 };
         sprintf_s(
             dataTime,
+            sizeof(dataTime),
             "%04d%02d%02d%02d%02d%02d",
             temp.tm_year + 1900, temp.tm_mon + 1, temp.tm_mday, temp.tm_hour, temp.tm_min, temp.tm_sec
         );
@@ -359,22 +308,40 @@ int easy_logger_write_log(int level, const char* format, ...)
 
     }
 
+    bool isOutputToFile = LoggerImplement::GetInstance().IsOutputToFile();
+
     switch (level)
     {
     case LOG_LEVEL_TRACE: {
+#if WIN32
         fmt.append(" [TRACE] ");
+#else
+        fmt.append(isOutputToFile ? " [TRACE] " : " \033[0;32m[TRACE]\033[0m ");
+#endif // !WIN32
         break;
     }
     case LOG_LEVEL_DEBUG: {
+#if WIN32
         fmt.append(" [DEBUG] ");
+#else
+        fmt.append(isOutputToFile ? " [DEBUG] " : " \033[0;33m[DEBUG]\033[0m ");
+#endif // !WIN32
         break;
     }
     case LOG_LEVEL_INFO: {
+#if WIN32
         fmt.append(" [INFO]  ");
+#else
+        fmt.append(isOutputToFile ? " [INFO]  " : " \033[0;34m[INFO]\033[0m  ");
+#endif // !WIN32
         break;
     }
     case LOG_LEVEL_ERROR: {
+#if WIN32
         fmt.append(" [ERROR] ");
+#else
+        fmt.append(isOutputToFile ? " [ERROR] " : " \033[0;31m[[ERROR]\033[0m ");
+#endif // !WIN32
         break;
     }
     default:

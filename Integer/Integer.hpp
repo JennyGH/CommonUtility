@@ -1,13 +1,17 @@
 #pragma once
-#include <string>
-#include <stdint.h>
-#include <stdio.h>
 #include <limits>
+#include <string>
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
 
 #if !defined(WIN32) && !defined(_WIN32)
 #ifndef sprintf_s
 #define sprintf_s(buffer, bufferSize, format, ...) sprintf(buffer, format, ##__VA_ARGS__)
 #endif // !sprintf_s
+#ifndef memcpy_s
+#define memcpy_s(dst, dstSize, src, srcSize) memcpy(dst, src, srcSize)
+#endif // !memcpy_s
 #ifndef sscanf_s
 #define sscanf_s(buffer, format, ...) sscanf(buffer, format, ##__VA_ARGS__)
 #endif // !sscanf_s
@@ -34,10 +38,9 @@ static std::string ToString(type val) { RETURN_FORMATED_STRING(64, format, val);
 static type FromString(const std::string& src) { type val = type(0); sscanf_s(src.c_str(), format, &val); return val;  }\
 }
 
-DECLARE_DEFAULT(int16_t, "%hd");
-DECLARE_DEFAULT(int32_t, "%d");
+DECLARE_DEFAULT(short, "%hd");
+DECLARE_DEFAULT(int, "%d");
 DECLARE_DEFAULT(long, "%ld");
-DECLARE_DEFAULT(int64_t, "%lld");
 
 template<typename T> class Integer;
 typedef Integer<short> Short;
@@ -48,7 +51,7 @@ typedef Integer<long long> Int64;
 template<typename T>
 class Integer
 {
-    static T FromBytes(const unsigned char src[]);
+    static T FromBytes(const unsigned char src[], unsigned int size);
     static T FromString(const char src[], const char fmt[]);
 public:
     static const Integer<T> Max;
@@ -57,7 +60,7 @@ public:
     Integer();
     Integer(T val);
     Integer(const char src[], const char fmt[] = NULL);
-    Integer(const unsigned char src[]);
+    Integer(const unsigned char src[], unsigned int size);
     ~Integer();
     operator T() const;
     operator std::string() const;
@@ -71,9 +74,11 @@ template<typename T>
 const Integer<T> Integer<T>::Min = std::numeric_limits<T>::min(); //(1LL << (sizeof(T) * 8 - 1)) + 1;
 
 template<typename T>
-inline T Integer<T>::FromBytes(const unsigned char src[])
+inline T Integer<T>::FromBytes(const unsigned char src[], unsigned int size)
 {
-    return T();
+    T val = T();
+    memcpy_s(&val, sizeof(val), src, size);
+    return val;
 }
 
 template<typename T>
@@ -108,11 +113,11 @@ inline Integer<T>::Integer(const char src[], const char fmt[]) : m_val(0)
 }
 
 template<typename T>
-inline Integer<T>::Integer(const unsigned char src[]) : m_val(0)
+inline Integer<T>::Integer(const unsigned char src[], unsigned int size) : m_val(0)
 {
     if (src != NULL)
     {
-        m_val = FromBytes(src);
+        m_val = FromBytes(src, size);
     }
 }
 

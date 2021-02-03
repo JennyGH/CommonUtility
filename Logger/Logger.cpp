@@ -12,6 +12,34 @@
 #define USE_MULTI_THREAD 1
 #endif // !USE_MULTI_THREAD
 
+// ========== Some log tags ==========
+static const char* g_logTags[] =
+{
+    " [TRACE] ",
+    " [DEBUG] ",
+    " [INFO]  ",
+    " [ERROR] ",
+};
+#if !WIN32
+#define UNIX_CONSOLE_COLOR(id) "\033[" #id "m"
+static const char* g_logTagFrontgroundColors[] =
+{
+    UNIX_CONSOLE_COLOR(32),
+    UNIX_CONSOLE_COLOR(33),
+    UNIX_CONSOLE_COLOR(34),
+    UNIX_CONSOLE_COLOR(31),
+};
+static const char* g_logTagBackgroundColors[] =
+{
+    UNIX_CONSOLE_COLOR(0),
+    UNIX_CONSOLE_COLOR(0),
+    UNIX_CONSOLE_COLOR(0),
+    UNIX_CONSOLE_COLOR(0),
+};
+#endif // !WIN32
+
+// ===================================
+
 // ========== Compatible ==========
 #if defined(WIN32) || defined(_WIN32)
 #include <Windows.h>
@@ -32,7 +60,7 @@
 #define sprintf_s(buffer, bufferSize, fmt, ...) sprintf(buffer, fmt, ##__VA_ARGS__)
 #endif // !sprintf_s
 #ifndef GetCurrentThreadId
-#define GetCurrentThreadId                      pthread_self
+#define GetCurrentThreadId                      gettid
 #endif // !GetCurrentThreadId
 #ifndef localtime_s
 #define localtime_s(_Tm, _Time)                 localtime_r((_Time), (_Tm))
@@ -85,9 +113,7 @@ class LoggerImplement
 #else
         ::sem_init(&m_hSemaphore, 0, 0);
         typedef void*(*thread_function_t)(void*);
-        // 线程 1: 获取随机数
         pthread_create(&m_hThread, NULL, (thread_function_t)_WorkThread, this);
-        // 线程 2: 对称加解密运算
         pthread_detach(m_hThread);
 #endif // defined WIN32
 #endif // USE_MULTI_THREAD
@@ -273,6 +299,11 @@ int easy_logger_write_log(int level, const char* format, ...)
         return bufferSize;
     }
 
+    if (level < LOG_LEVEL_TRACE || level > LOG_LEVEL_ERROR)
+    {
+        return bufferSize;
+    }
+
     if (level < nLevel)
     {
         return bufferSize;
@@ -288,7 +319,7 @@ int easy_logger_write_log(int level, const char* format, ...)
     // Get current thread id.
     {
         char tid[64] = { 0 };
-        sprintf_s(tid, sizeof(tid), "TID_0x%08lx ", GetCurrentThreadId());
+        sprintf_s(tid, sizeof(tid), "TID_%ld ", GetCurrentThreadId());
         fmt.append(tid);
     }
 
@@ -310,43 +341,22 @@ int easy_logger_write_log(int level, const char* format, ...)
 
     bool isOutputToFile = LoggerImplement::GetInstance().IsOutputToFile();
 
-    switch (level)
+#if !WIN32
+    if (!isOutputToFile)
     {
-    case LOG_LEVEL_TRACE: {
-#if WIN32
-        fmt.append(" [TRACE] ");
-#else
-        fmt.append(isOutputToFile ? " [TRACE] " : " \033[0;32m[TRACE]\033[0m ");
+        fmt.append(g_logTagFrontgroundColors[level]);
+    }
 #endif // !WIN32
-        break;
+
+    fmt.append(g_logTags[level]);
+
+#if !WIN32
+    if (!isOutputToFile)
+    {
+        fmt.append(g_logTagBackgroundColors[level]);
     }
-    case LOG_LEVEL_DEBUG: {
-#if WIN32
-        fmt.append(" [DEBUG] ");
-#else
-        fmt.append(isOutputToFile ? " [DEBUG] " : " \033[0;33m[DEBUG]\033[0m ");
 #endif // !WIN32
-        break;
-    }
-    case LOG_LEVEL_INFO: {
-#if WIN32
-        fmt.append(" [INFO]  ");
-#else
-        fmt.append(isOutputToFile ? " [INFO]  " : " \033[0;34m[INFO]\033[0m  ");
-#endif // !WIN32
-        break;
-    }
-    case LOG_LEVEL_ERROR: {
-#if WIN32
-        fmt.append(" [ERROR] ");
-#else
-        fmt.append(isOutputToFile ? " [ERROR] " : " \033[0;31m[[ERROR]\033[0m ");
-#endif // !WIN32
-        break;
-    }
-    default:
-        break;
-    }
+
     fmt.append(format);
     fmt.append("\n");
     format = fmt.c_str();

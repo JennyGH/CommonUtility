@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #ifndef GetCurrentThreadId
-#define GetCurrentThreadId                pthread_self
+#define GetCurrentThreadId                gettid
 #endif // !GetCurrentThreadId
 #ifndef CRITICAL_SECTION
 #define CRITICAL_SECTION                  pthread_mutex_t

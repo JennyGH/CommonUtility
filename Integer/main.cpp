@@ -5,7 +5,7 @@
 
 #define _STDOUT(content) std::cout << #content << ":  " << content << std::endl
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     _STDOUT(Integer<int>::Max);
     _STDOUT(Integer<int>::Min);
@@ -26,8 +26,8 @@ int main(int argc, char *argv[])
     _STDOUT(Integer<unsigned long long>::Max);
     _STDOUT(Integer<unsigned long long>::Min);
     Int64 a("1024");
-    Short max = Short::Min;
+    _STDOUT(a);
     std::string str2(a);
-    printf("%s", str2.c_str());
+    _STDOUT(str2);
     return 0;
 }

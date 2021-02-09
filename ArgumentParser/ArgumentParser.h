@@ -15,12 +15,14 @@ public:
     ~ArgumentNotFoundException();
     const char* getModuleName() const;
     const char* what() const;
+
 private:
-    std::string    m_moduleName;
-    std::string    m_message;
+    std::string m_moduleName;
+    std::string m_message;
 };
 
-static void _IsArgumentExist(const std::string& argumentName, const std::string& applicationName, _ArgumentMap& arguments)
+static void
+_IsArgumentExist(const std::string& argumentName, const std::string& applicationName, _ArgumentMap& arguments)
 {
     if (arguments.find(argumentName) == arguments.end())
     {
@@ -28,17 +30,22 @@ static void _IsArgumentExist(const std::string& argumentName, const std::string&
     }
 }
 
-template<typename ValueType>
+template <typename ValueType>
 struct _ArgumentGetter
 {
-    static ValueType ValueOf(const std::string& argumentName, const std::string& applicationName, _ArgumentMap& arguments)
+    static ValueType
+    ValueOf(const std::string& argumentName, const std::string& applicationName, _ArgumentMap& arguments)
     {
         _IsArgumentExist(argumentName, applicationName, arguments);
         ValueType val = ValueType();
         arguments[argumentName] >> val;
         return val;
     }
-    static ValueType ValueOf(const std::string& argumentName, const std::string& applicationName, _ArgumentMap& arguments, ValueType defaultValue)
+    static ValueType ValueOf(
+        const std::string& argumentName,
+        const std::string& applicationName,
+        _ArgumentMap&      arguments,
+        ValueType          defaultValue)
     {
         ValueType val = defaultValue;
         if (arguments.find(argumentName) != arguments.end())
@@ -51,7 +58,7 @@ struct _ArgumentGetter
     }
 };
 
-template<>
+template <>
 struct _ArgumentGetter<bool>
 {
     static bool ValueOf(const std::string& argumentName, const std::string& applicationName, _ArgumentMap& arguments)
@@ -64,7 +71,11 @@ struct _ArgumentGetter<bool>
         }
         return val;
     }
-    static bool ValueOf(const std::string& argumentName, const std::string& applicationName, _ArgumentMap& arguments, bool defaultValue)
+    static bool ValueOf(
+        const std::string& argumentName,
+        const std::string& applicationName,
+        _ArgumentMap&      arguments,
+        bool               defaultValue)
     {
         bool val = defaultValue;
         if (arguments.find(argumentName) != arguments.end())
@@ -75,15 +86,20 @@ struct _ArgumentGetter<bool>
     }
 };
 
-template<>
+template <>
 struct _ArgumentGetter<std::string>
 {
-    static std::string ValueOf(const std::string& argumentName, const std::string& applicationName, _ArgumentMap& arguments)
+    static std::string
+    ValueOf(const std::string& argumentName, const std::string& applicationName, _ArgumentMap& arguments)
     {
         _IsArgumentExist(argumentName, applicationName, arguments);
         return arguments[argumentName];
     }
-    static std::string ValueOf(const std::string& argumentName, const std::string& applicationName, _ArgumentMap& arguments, std::string defaultValue)
+    static std::string ValueOf(
+        const std::string& argumentName,
+        const std::string& applicationName,
+        _ArgumentMap&      arguments,
+        std::string        defaultValue)
     {
         std::string val = defaultValue;
         if (arguments.find(argumentName) == arguments.end())
@@ -101,13 +117,13 @@ public:
 
     ~ArgumentParser();
 
-    template<typename T>
+    template <typename T>
     T get(const std::string& argumentName)
     {
         return _ArgumentGetter<T>::ValueOf(argumentName, m_application, m_arguments);
     }
 
-    template<typename T>
+    template <typename T>
     T get(const std::string& argumentName, T defaultValue)
     {
         return _ArgumentGetter<T>::ValueOf(argumentName, m_application, m_arguments, defaultValue);
@@ -116,6 +132,6 @@ public:
     std::string getApplicationName() const;
 
 private:
-    std::string m_application;
+    std::string  m_application;
     _ArgumentMap m_arguments;
 };

@@ -1,17 +1,27 @@
 ﻿#include "DateTime.h"
+#include <string>
+#include <iostream>
 
-int main(int argc, char *argv[])
+#define _STDOUT(target) std::cout << #target << ": " << target << std::endl
+
+int main(int argc, char* argv[])
 {
-    DateTime now = DateTime::Now();
-    DateTime today = DateTime::Today();
-    DateTime utc = DateTime::UtcNow();
-    DateTime local = utc.ToLocalTime();
-    DateTime universal = now.ToUniversalTime();
-    std::string longDateString = now.ToLongDateString();
-    std::string longTimeString = now.ToLongTimeString();
+    DateTime    now             = DateTime::Now();
+    DateTime    today           = DateTime::Today();
+    DateTime    utc             = DateTime::UtcNow();
+    DateTime    local           = utc.ToLocalTime();
+    DateTime    universal       = now.ToUniversalTime();
+    std::string longDateString  = now.ToLongDateString();
+    std::string longTimeString  = now.ToLongTimeString();
     std::string shortDateString = now.ToShortDateString();
     std::string shortTimeString = now.ToShortTimeString();
-    std::string strDateTime = now.ToString("%Y-%m-%d %H:%M:%S %a");
+    std::string strDateTime     = now.ToString("%Y-%m-%d %H:%M:%S %a");
+
+    _STDOUT(longDateString);
+    _STDOUT(longTimeString);
+    _STDOUT(shortDateString);
+    _STDOUT(shortTimeString);
+    _STDOUT(strDateTime);
 
     TimeSpan::MaxValue;
     TimeSpan::MinValue;
@@ -21,6 +31,6 @@ int main(int argc, char *argv[])
     TimeSpan aaa = timeSpan0 - timeSpan1;
     timeSpan0.Subtract(timeSpan1);
     TimeSpan duration = aaa.Duration();
-    TimeSpan negate = aaa.Negate();
+    TimeSpan negate   = aaa.Negate();
     return 0;
 }

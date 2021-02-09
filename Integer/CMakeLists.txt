@@ -1,20 +1,18 @@
-PROJECT(CommonUtility)
+PROJECT(Integer)
 
-FILE(GLOB_RECURSE all_files
-        ${CMAKE_CURRENT_SOURCE_DIR}/*.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/*.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
-
-FILE(GLOB_RECURSE include_files
+FILE(GLOB_RECURSE INCLUDE_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/*.h
         ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp)
 
-FILE(GLOB_RECURSE src_files 
+FILE(GLOB_RECURSE SOURCE_FILES 
         ${CMAKE_CURRENT_SOURCE_DIR}/*.c
         ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 
-SOURCE_GROUP("Header Files" FILES "${include_files}")
-SOURCE_GROUP("Source Files" FILES "${src_files}")
+SOURCE_GROUP("Header Files" FILES "${INCLUDE_FILES}")
+SOURCE_GROUP("Source Files" FILES "${SOURCE_FILES}")
 
-ADD_EXECUTABLE(Integer ${all_files})
+ADD_EXECUTABLE(
+    ${PROJECT_NAME}
+    ${INCLUDE_FILES}
+    ${SOURCE_FILES}
+)

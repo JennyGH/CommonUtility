@@ -63,10 +63,10 @@ std::string Convert::ToHex(const unsigned char src[], int len, bool upperCase)
 
     for (int index = 0; index < len; index++)
     {
-        char c = src[index];
-        char buffer[2] = { 0 };
-        buffer[0] = GetHex((c >> 4) & 0x0f);
-        buffer[1] = GetHex((c >> 0) & 0x0f);
+        char c         = src[index];
+        char buffer[2] = {0};
+        buffer[0]      = GetHex((c >> 4) & 0x0f);
+        buffer[1]      = GetHex((c >> 0) & 0x0f);
         res.append(buffer, 2);
     }
 
@@ -82,11 +82,11 @@ std::string Convert::FromHex(const std::string& hex)
     }
 
     std::string::const_iterator iter = hex.begin();
-    std::string::const_iterator end = hex.end();
+    std::string::const_iterator end  = hex.end();
     for (; iter != end;)
     {
-        const char& hc = *iter++;
-        const char& lc = *iter++;
+        const char&   hc   = *iter++;
+        const char&   lc   = *iter++;
         unsigned char byte = 0x00;
         byte |= (GetByte(hc) << 4);
         byte |= (GetByte(lc) << 0);

@@ -1,6 +1,7 @@
 #include "ArgumentParser.h"
 
-ArgumentParser::ArgumentParser(int argc, char ** argv) : m_application(argv[0])
+ArgumentParser::ArgumentParser(int argc, char** argv)
+    : m_application(argv[0])
 {
     if (argc <= 1)
     {
@@ -21,32 +22,27 @@ ArgumentParser::ArgumentParser(int argc, char ** argv) : m_application(argv[0])
     }
 }
 
-ArgumentParser::~ArgumentParser()
-{
-
-}
+ArgumentParser::~ArgumentParser() {}
 
 std::string ArgumentParser::getApplicationName() const
 {
     return m_application;
 }
 
-ArgumentNotFoundException::ArgumentNotFoundException(const std::string & moduleName, const std::string & optionName)
+ArgumentNotFoundException::ArgumentNotFoundException(const std::string& moduleName, const std::string& optionName)
     : m_moduleName(moduleName)
     , m_message("The argument `" + optionName + "` is required.")
 {
 }
 
-ArgumentNotFoundException::~ArgumentNotFoundException()
-{
-}
+ArgumentNotFoundException::~ArgumentNotFoundException() {}
 
 const char* ArgumentNotFoundException::getModuleName() const
 {
     return m_moduleName.c_str();
 }
 
-const char * ArgumentNotFoundException::what() const
+const char* ArgumentNotFoundException::what() const
 {
     return m_message.c_str();
 }
